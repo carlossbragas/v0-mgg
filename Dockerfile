@@ -10,8 +10,8 @@ RUN npm install -g pnpm && pnpm install --frozen-lockfile
 
 # Etapa de build
 FROM base AS builder
-RUN npm install -g pnpm
 WORKDIR /app
+RUN npm install -g pnpm
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
@@ -21,7 +21,7 @@ RUN pnpm build
 FROM base AS runner
 WORKDIR /app
 
-# ✅ Instala o pnpm no runner
+# Instala pnpm para o comando final funcionar
 RUN npm install -g pnpm
 
 COPY --from=builder /app/.next ./.next
