@@ -4,135 +4,163 @@ import type React from "react"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Wallet, Eye, EyeOff } from "lucide-react"
+import { Lock, Mail } from "lucide-react"
 
 interface LoginScreenProps {
-  onLogin: (userData: any) => void
-  onBack: () => void
+  onLogin: (email: string) => void
+  onGoToRegister: () => void
 }
 
-export default function LoginScreen({ onLogin, onBack }: LoginScreenProps) {
-  const [isLogin, setIsLogin] = useState(true)
-  const [showPassword, setShowPassword] = useState(false)
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    name: "",
-  })
+export default function LoginScreen({ onLogin, onGoToRegister }: LoginScreenProps) {
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Mock login
-    onLogin({
-      name: formData.name || "Usuário",
-      email: formData.email,
-    })
+    // Mock login logic
+    onLogin(email)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
-      {/* Header */}
-      <div className="bg-[#007A33] text-white p-4">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-emerald-700">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <Wallet className="w-6 h-6" />
-            <h1 className="text-xl font-bold">MinhaGrana</h1>
+    <Card className="w-full max-w-sm bg-white text-[#007A33] rounded-lg shadow-lg p-6">
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl font-bold mb-4">Entrar</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="email-login" className="flex items-center gap-2 mb-1">
+              <Mail className="h-4 w-4" /> E-mail
+            </Label>
+            <Input
+              id="email-login"
+              type="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="border-[#007A33] focus:ring-[#007A33]"
+            />
           </div>
+          <div>
+            <Label htmlFor="password-login" className="flex items-center gap-2 mb-1">
+              <Lock className="h-4 w-4" /> Senha
+            </Label>
+            <Input
+              id="password-login"
+              type="password"
+              placeholder="********"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="border-[#007A33] focus:ring-[#007A33]"
+            />
+          </div>
+          <Button
+            type="submit"
+            className="w-full bg-[#007A33] hover:bg-[#005F28] text-white font-bold py-3 rounded-lg text-lg transition-colors"
+          >
+            Entrar
+          </Button>
+        </form>
+        <Button
+          variant="link"
+          className="w-full text-[#007A33] hover:text-[#005F28]"
+          onClick={() => alert('Funcionalidade "Esqueci a senha" em desenvolvimento!')}
+        >
+          Esqueci a senha
+        </Button>
+        <div className="text-center text-gray-600">
+          Não tem uma conta?{" "}
+          <Button variant="link" className="text-[#007A33] hover:text-[#005F28]" onClick={onGoToRegister}>
+            Criar conta
+          </Button>
         </div>
-      </div>
+      </CardContent>
+    </Card>
+  )
+}
 
-      <div className="p-6">
-        <Card className="max-w-md mx-auto border-2 border-emerald-200">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-gray-800">{isLogin ? "Entrar" : "Criar Conta"}</CardTitle>
-            <p className="text-gray-600">{isLogin ? "Acesse sua conta familiar" : "Crie sua conta familiar"}</p>
-          </CardHeader>
+function RegisterScreen({ onRegister, onGoToLogin }: { onRegister: (email: string) => void; onGoToLogin: () => void }) {
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
 
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome Completo</Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="Seu nome completo"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33]"
-                    required
-                  />
-                </div>
-              )}
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (password !== confirmPassword) {
+      alert("As senhas não coincidem!")
+      return
+    }
+    onRegister(email)
+  }
 
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33]"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Sua senha"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33] pr-10"
-                    required
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full bg-[#007A33] hover:bg-[#005A26] text-white font-semibold py-3 rounded-xl"
-              >
-                {isLogin ? "Entrar" : "Criar Conta"}
-              </Button>
-            </form>
-
-            {isLogin && (
-              <div className="text-center mt-4">
-                <Button variant="link" className="text-[#007A33] text-sm">
-                  Esqueci minha senha
-                </Button>
-              </div>
-            )}
-
-            <div className="text-center mt-6 pt-4 border-t border-emerald-200">
-              <p className="text-gray-600 text-sm">{isLogin ? "Não tem uma conta?" : "Já tem uma conta?"}</p>
-              <Button variant="link" onClick={() => setIsLogin(!isLogin)} className="text-[#007A33] font-semibold">
-                {isLogin ? "Criar conta" : "Fazer login"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+  return (
+    <Card className="w-full max-w-sm bg-white text-[#007A33] rounded-lg shadow-lg p-6">
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl font-bold mb-4">Criar Conta</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="email-register" className="flex items-center gap-2 mb-1">
+              <Mail className="h-4 w-4" /> E-mail
+            </Label>
+            <Input
+              id="email-register"
+              type="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="border-[#007A33] focus:ring-[#007A33]"
+            />
+          </div>
+          <div>
+            <Label htmlFor="password-register" className="flex items-center gap-2 mb-1">
+              <Lock className="h-4 w-4" /> Senha
+            </Label>
+            <Input
+              id="password-register"
+              type="password"
+              placeholder="********"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="border-[#007A33] focus:ring-[#007A33]"
+            />
+          </div>
+          <div>
+            <Label htmlFor="confirm-password-register" className="flex items-center gap-2 mb-1">
+              <Lock className="h-4 w-4" /> Confirmar Senha
+            </Label>
+            <Input
+              id="confirm-password-register"
+              type="password"
+              placeholder="********"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              className="border-[#007A33] focus:ring-[#007A33]"
+            />
+          </div>
+          <Button
+            type="submit"
+            className="w-full bg-[#007A33] hover:bg-[#005F28] text-white font-bold py-3 rounded-lg text-lg transition-colors"
+          >
+            Criar Conta
+          </Button>
+        </form>
+        <div className="text-center text-gray-600">
+          Já tem uma conta?{" "}
+          <Button variant="link" className="text-[#007A33] hover:text-[#005F28]" onClick={onGoToLogin}>
+            Entrar
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

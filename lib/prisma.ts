@@ -1,13 +1,17 @@
 import { PrismaClient } from "@prisma/client"
 
-// Adiciona o PrismaClient ao objeto global para evitar múltiplas instâncias em desenvolvimento
-// Isso é uma boa prática para evitar problemas de "hot-reloading" no Next.js
-const globalForPrisma = global as unknown as { prisma: PrismaClient }
+// Garante que apenas uma instância do PrismaClient seja criada
+// e reutilizada em todo o ambiente de desenvolvimento.
+// Isso evita problemas de "hot-reloading" no Next.js que poderiam
+// criar múltiplas instâncias do PrismaClient.
+const prismaClientSingleton = () => {
+  return new PrismaClient()
+}
 
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    log: ["query", "info", "warn", "error"], // Opcional: logs de queries para depuração
-  })
+declare global {
+  var prismaGlobal: undefined | ReturnType<typeof prismaClientSingleton>
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
+export const prisma = globalThis.prismaGlobal ?? prismaClientSingleton()
+
+if (process.env.NODE_ENV !== "production") globalThis.prismaGlobal = prisma

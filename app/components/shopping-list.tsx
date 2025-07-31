@@ -1,169 +1,136 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Plus, ShoppingCart, Check, Edit, Trash2, DollarSign } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { ArrowLeft, Plus, ShoppingCart, Edit, Trash2, DollarSign, Tag } from "lucide-react"
 
-interface ShoppingListProps {
-  onBack: () => void
+interface ShoppingItem {
+  id: string
+  name: string
+  quantity: string
+  category: string
+  estimatedPrice: number
+  actualPrice?: number
+  notes?: string
+  isPurchased: boolean
 }
 
-export default function ShoppingList({ onBack }: ShoppingListProps) {
-  const [showItemForm, setShowItemForm] = useState(false)
-  const [filter, setFilter] = useState<"all" | "pending" | "purchased">("all")
+export default function ShoppingList() {
+  const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([
+    {
+      id: "s1",
+      name: "Leite Integral",
+      quantity: "2 litros",
+      category: "Laticínios",
+      estimatedPrice: 8.5,
+      actualPrice: 8.5,
+      isPurchased: true,
+    },
+    {
+      id: "s2",
+      name: "Pão Francês",
+      quantity: "10 unidades",
+      category: "Padaria",
+      estimatedPrice: 12.0,
+      isPurchased: false,
+    },
+    {
+      id: "s3",
+      name: "Detergente",
+      quantity: "1 unidade",
+      category: "Limpeza",
+      estimatedPrice: 4.99,
+      isPurchased: false,
+    },
+  ])
 
-  const [itemForm, setItemForm] = useState({
-    item: "",
-    quantity: "1",
-    category: "",
-    estimatedPrice: "",
-    notes: "",
-  })
+  const [newItemName, setNewItemName] = useState("")
+  const [newItemQuantity, setNewItemQuantity] = useState("")
+  const [newItemCategory, setNewItemCategory] = useState("")
+  const [newItemEstimatedPrice, setNewItemEstimatedPrice] = useState("")
+  const [newItemNotes, setNewItemNotes] = useState("")
 
-  // Mock data
   const categories = [
-    "Laticínios",
-    "Padaria",
-    "Grãos",
-    "Carnes",
-    "Frutas",
-    "Verduras",
-    "Limpeza",
-    "Higiene",
+    "Alimentação",
     "Bebidas",
+    "Limpeza",
+    "Higiene Pessoal",
+    "Padaria",
+    "Laticínios",
+    "Carnes",
+    "Hortifruti",
     "Outros",
   ]
 
-  const shoppingItems = [
-    {
-      id: 1,
-      item: "Leite integral",
-      quantity: 2,
-      category: "Laticínios",
-      estimatedPrice: 8.5,
-      actualPrice: null,
-      purchased: false,
-      addedBy: "Maria Silva",
-      addedAt: "2024-01-15",
-      notes: "Marca preferida: Nestlé",
-    },
-    {
-      id: 2,
-      item: "Pão francês",
-      quantity: 1,
-      category: "Padaria",
-      estimatedPrice: 12.0,
-      actualPrice: 11.5,
-      purchased: true,
-      addedBy: "João Silva",
-      addedAt: "2024-01-14",
-      purchasedAt: "2024-01-16",
-      notes: "",
-    },
-    {
-      id: 3,
-      item: "Arroz tipo 1",
-      quantity: 1,
-      category: "Grãos",
-      estimatedPrice: 25.0,
-      actualPrice: null,
-      purchased: false,
-      addedBy: "Ana Silva",
-      addedAt: "2024-01-13",
-      notes: "Pacote de 5kg",
-    },
-    {
-      id: 4,
-      item: "Banana prata",
-      quantity: 2,
-      category: "Frutas",
-      estimatedPrice: 6.0,
-      actualPrice: 5.8,
-      purchased: true,
-      addedBy: "Pedro Silva",
-      addedAt: "2024-01-12",
-      purchasedAt: "2024-01-16",
-      notes: "Por kg",
-    },
-    {
-      id: 5,
-      item: "Detergente",
-      quantity: 3,
-      category: "Limpeza",
-      estimatedPrice: 15.0,
-      actualPrice: null,
-      purchased: false,
-      addedBy: "Maria Silva",
-      addedAt: "2024-01-11",
-      notes: "Qualquer marca",
-    },
-  ]
-
-  const handleItemSubmit = (e: React.FormEvent) => {
+  const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault()
-    // Mock save item
-    console.log("New shopping item:", itemForm)
-    setItemForm({
-      item: "",
-      quantity: "1",
-      category: "",
-      estimatedPrice: "",
-      notes: "",
-    })
-    setShowItemForm(false)
-  }
-
-  const toggleItemPurchased = (itemId: number) => {
-    // Mock toggle purchased
-    console.log("Toggle item purchased:", itemId)
-  }
-
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      Laticínios: "bg-blue-100 text-blue-800",
-      Padaria: "bg-yellow-100 text-yellow-800",
-      Grãos: "bg-orange-100 text-orange-800",
-      Carnes: "bg-red-100 text-red-800",
-      Frutas: "bg-green-100 text-green-800",
-      Verduras: "bg-emerald-100 text-emerald-800",
-      Limpeza: "bg-purple-100 text-purple-800",
-      Higiene: "bg-pink-100 text-pink-800",
-      Bebidas: "bg-cyan-100 text-cyan-800",
-      Outros: "bg-gray-100 text-gray-800",
+    const estimatedPrice = Number.parseFloat(newItemEstimatedPrice.replace(",", ".")) || 0
+    if (!newItemName || !newItemQuantity || !newItemCategory) {
+      alert("Nome, quantidade e categoria são obrigatórios para o item de compra.")
+      return
     }
-    return colors[category] || "bg-gray-100 text-gray-800"
+
+    const newItem: ShoppingItem = {
+      id: `s${shoppingItems.length + 1}`,
+      name: newItemName,
+      quantity: newItemQuantity,
+      category: newItemCategory,
+      estimatedPrice: estimatedPrice,
+      isPurchased: false,
+    }
+    setShoppingItems((prev) => [...prev, newItem])
+    setNewItemName("")
+    setNewItemQuantity("")
+    setNewItemCategory("")
+    setNewItemEstimatedPrice("")
+    setNewItemNotes("")
+    alert("Item adicionado à lista de compras!")
   }
 
-  const filteredItems = shoppingItems.filter((item) => {
-    switch (filter) {
-      case "pending":
-        return !item.purchased
-      case "purchased":
-        return item.purchased
-      default:
-        return true
+  const handleTogglePurchased = (id: string, isChecked: boolean) => {
+    setShoppingItems((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, isPurchased: isChecked, actualPrice: isChecked ? item.estimatedPrice : undefined }
+          : item,
+      ),
+    )
+  }
+
+  const handleEditItem = (id: string) => {
+    alert(`Editar item: ${id}`)
+    // Implement actual edit logic (e.g., open a dialog with pre-filled data)
+  }
+
+  const handleDeleteItem = (id: string) => {
+    if (confirm("Tem certeza que deseja remover este item da lista de compras?")) {
+      setShoppingItems((prev) => prev.filter((item) => item.id !== id))
+      alert("Item removido!")
     }
-  })
+  }
 
-  const totalEstimated = shoppingItems
-    .filter((item) => !item.purchased)
-    .reduce((sum, item) => sum + item.estimatedPrice, 0)
-
-  const totalSpent = shoppingItems
-    .filter((item) => item.purchased && item.actualPrice)
-    .reduce((sum, item) => sum + (item.actualPrice || 0), 0)
+  const totalEstimated = shoppingItems.reduce((sum, item) => sum + item.estimatedPrice, 0)
+  const totalPurchased = shoppingItems.reduce(
+    (sum, item) => sum + (item.isPurchased ? item.actualPrice || item.estimatedPrice : 0),
+    0,
+  )
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
       <div className="bg-blue-600 text-white p-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-blue-700">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => window.history.back()}
+            className="text-white hover:bg-blue-700"
+          >
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
@@ -174,262 +141,165 @@ export default function ShoppingList({ onBack }: ShoppingListProps) {
       </div>
 
       <div className="p-4 space-y-4">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="border-2 border-blue-200">
-            <CardContent className="p-4 text-center">
-              <ShoppingCart className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-              <p className="text-xs text-gray-600 mb-1">Valor Estimado</p>
-              <p className="text-lg font-bold text-gray-800">R$ {totalEstimated.toFixed(2)}</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-blue-200">
-            <CardContent className="p-4 text-center">
-              <DollarSign className="w-8 h-8 text-green-600 mx-auto mb-2" />
-              <p className="text-xs text-gray-600 mb-1">Total Gasto</p>
-              <p className="text-lg font-bold text-gray-800">R$ {totalSpent.toFixed(2)}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Add Item Button */}
-        <Card className="border-2 border-blue-200">
-          <CardContent className="p-4">
-            <Button
-              onClick={() => setShowItemForm(!showItemForm)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl p-4 h-auto flex items-center justify-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Adicionar Item</span>
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Item Form */}
-        {showItemForm && (
-          <Card className="border-2 border-blue-200">
-            <CardHeader>
-              <CardTitle className="text-lg text-gray-800">Novo Item</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleItemSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="itemName">Nome do Item</Label>
-                  <Input
-                    id="itemName"
-                    placeholder="Ex: Leite integral, Pão francês..."
-                    value={itemForm.item}
-                    onChange={(e) => setItemForm({ ...itemForm, item: e.target.value })}
-                    className="rounded-xl border-2 border-blue-200 focus:border-blue-600"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="itemQuantity">Quantidade</Label>
-                    <Input
-                      id="itemQuantity"
-                      type="number"
-                      min="1"
-                      placeholder="1"
-                      value={itemForm.quantity}
-                      onChange={(e) => setItemForm({ ...itemForm, quantity: e.target.value })}
-                      className="rounded-xl border-2 border-blue-200 focus:border-blue-600"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Categoria</Label>
-                    <Select
-                      value={itemForm.category}
-                      onValueChange={(value) => setItemForm({ ...itemForm, category: value })}
-                    >
-                      <SelectTrigger className="rounded-xl border-2 border-blue-200 focus:border-blue-600">
-                        <SelectValue placeholder="Selecionar" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="itemPrice">Preço Estimado (R$)</Label>
-                  <Input
-                    id="itemPrice"
-                    type="number"
-                    step="0.01"
-                    placeholder="0,00"
-                    value={itemForm.estimatedPrice}
-                    onChange={(e) => setItemForm({ ...itemForm, estimatedPrice: e.target.value })}
-                    className="rounded-xl border-2 border-blue-200 focus:border-blue-600"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="itemNotes">Observações (opcional)</Label>
-                  <Input
-                    id="itemNotes"
-                    placeholder="Ex: Marca preferida, tamanho..."
-                    value={itemForm.notes}
-                    onChange={(e) => setItemForm({ ...itemForm, notes: e.target.value })}
-                    className="rounded-xl border-2 border-blue-200 focus:border-blue-600"
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl">
-                    Adicionar Item
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowItemForm(false)}
-                    className="flex-1 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl bg-transparent"
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Filter Buttons */}
-        <Card className="border-2 border-blue-200">
-          <CardContent className="p-4">
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                onClick={() => setFilter("all")}
-                variant={filter === "all" ? "default" : "outline"}
-                className={`rounded-xl text-sm ${
-                  filter === "all"
-                    ? "bg-blue-600 text-white"
-                    : "border-2 border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
-                }`}
-              >
-                Todos
-              </Button>
-              <Button
-                onClick={() => setFilter("pending")}
-                variant={filter === "pending" ? "default" : "outline"}
-                className={`rounded-xl text-sm ${
-                  filter === "pending"
-                    ? "bg-blue-600 text-white"
-                    : "border-2 border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
-                }`}
-              >
-                Pendentes
-              </Button>
-              <Button
-                onClick={() => setFilter("purchased")}
-                variant={filter === "purchased" ? "default" : "outline"}
-                className={`rounded-xl text-sm ${
-                  filter === "purchased"
-                    ? "bg-blue-600 text-white"
-                    : "border-2 border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
-                }`}
-              >
-                Comprados
-              </Button>
+        {/* Add New Item Form */}
+        <h3 className="text-xl font-semibold text-gray-700 mb-4">Adicionar Novo Item</h3>
+        <form onSubmit={handleAddItem} className="space-y-4 p-4 border rounded-lg bg-blue-50">
+          <div>
+            <Label htmlFor="item-name" className="flex items-center gap-2 mb-1">
+              <ShoppingCart className="h-4 w-4" /> Nome do Item
+            </Label>
+            <Input
+              id="item-name"
+              type="text"
+              placeholder="Ex: Arroz, Leite, Pão"
+              value={newItemName}
+              onChange={(e) => setNewItemName(e.target.value)}
+              required
+              className="border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="item-quantity" className="flex items-center gap-2 mb-1">
+                Quantidade
+              </Label>
+              <Input
+                id="item-quantity"
+                type="text"
+                placeholder="Ex: 5kg, 2 unidades"
+                value={newItemQuantity}
+                onChange={(e) => setNewItemQuantity(e.target.value)}
+                required
+                className="border-blue-500 focus:ring-blue-500"
+              />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <Label htmlFor="item-category" className="flex items-center gap-2 mb-1">
+                <Tag className="h-4 w-4" /> Categoria
+              </Label>
+              <Select value={newItemCategory} onValueChange={setNewItemCategory} required>
+                <SelectTrigger className="w-full border-blue-500 focus:ring-blue-500">
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="item-estimated-price" className="flex items-center gap-2 mb-1">
+              <DollarSign className="h-4 w-4" /> Preço Estimado (R$)
+            </Label>
+            <Input
+              id="item-estimated-price"
+              type="text"
+              placeholder="Ex: 15,99"
+              value={newItemEstimatedPrice}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9,.]/g, "")
+                setNewItemEstimatedPrice(val)
+              }}
+              className="border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <Label htmlFor="item-notes" className="mb-1">
+              Observações
+            </Label>
+            <Input
+              id="item-notes"
+              type="text"
+              placeholder="Ex: Marca X, Tamanho grande"
+              value={newItemNotes}
+              onChange={(e) => setNewItemNotes(e.target.value)}
+              className="border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+            <Plus className="h-5 w-5 mr-2" /> Adicionar Item
+          </Button>
+        </form>
 
-        {/* Shopping Items List */}
+        {/* Shopping List */}
+        <h3 className="text-xl font-semibold text-gray-700 mt-6 mb-4">Itens da Lista</h3>
         <div className="space-y-3">
-          {filteredItems.map((item) => (
-            <Card key={item.id} className="border-2 border-blue-200">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => toggleItemPurchased(item.id)}
-                    className="mt-1 flex-shrink-0"
-                  >
-                    {item.purchased ? (
-                      <Check className="w-5 h-5 text-green-600" />
-                    ) : (
-                      <ShoppingCart className="w-5 h-5 text-gray-400" />
-                    )}
-                  </Button>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3
-                          className={`font-semibold text-gray-800 ${
-                            item.purchased ? "line-through text-gray-500" : ""
-                          }`}
-                        >
-                          {item.item}
-                        </h3>
-                        <p className="text-sm text-gray-600">Quantidade: {item.quantity}</p>
-                      </div>
-                      <div className="flex gap-1 ml-2">
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-600">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(item.category)}`}>
-                        {item.category}
-                      </span>
-                      {item.purchased && (
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          Comprado
-                        </span>
-                      )}
-                    </div>
-
-                    {item.notes && (
-                      <p className={`text-sm text-gray-600 mb-2 italic ${item.purchased ? "line-through" : ""}`}>
-                        {item.notes}
+          {shoppingItems.length === 0 ? (
+            <p className="text-center text-gray-500 py-4">Sua lista de compras está vazia.</p>
+          ) : (
+            shoppingItems.map((item) => (
+              <Card
+                key={item.id}
+                className={`p-3 flex items-center justify-between shadow-sm ${
+                  item.isPurchased ? "bg-green-50 border-l-4 border-green-500" : "bg-white border-l-4 border-blue-500"
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id={`item-${item.id}`}
+                    checked={item.isPurchased}
+                    onCheckedChange={(checked) => handleTogglePurchased(item.id, checked as boolean)}
+                    className="data-[state=checked]:bg-blue-600 data-[state=checked]:text-white"
+                  />
+                  <div>
+                    <p className={`font-medium text-gray-800 ${item.isPurchased ? "line-through text-gray-500" : ""}`}>
+                      {item.name} ({item.quantity})
+                    </p>
+                    <p className="text-sm text-gray-600">{item.category}</p>
+                    {item.estimatedPrice > 0 && (
+                      <p className="text-xs text-gray-500">
+                        Estimado: R$ {item.estimatedPrice.toFixed(2).replace(".", ",")}
+                        {item.isPurchased && item.actualPrice && item.actualPrice !== item.estimatedPrice && (
+                          <span className="ml-1"> (Pago: R$ {item.actualPrice.toFixed(2).replace(".", ",")})</span>
+                        )}
                       </p>
                     )}
-
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="text-gray-600">
-                        <span>Estimado: R$ {item.estimatedPrice.toFixed(2)}</span>
-                        {item.actualPrice && (
-                          <span className="ml-2 text-green-600 font-semibold">
-                            Real: R$ {item.actualPrice.toFixed(2)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {item.addedBy} • {item.addedAt}
-                      </div>
-                    </div>
+                    {item.notes && <p className="text-xs text-gray-500 italic">{item.notes}</p>}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleEditItem(item.id)}
+                    className="text-blue-500 border-blue-500 hover:bg-blue-50"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleDeleteItem(item.id)}
+                    className="text-red-500 border-red-500 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </Card>
+            ))
+          )}
         </div>
 
-        {filteredItems.length === 0 && (
-          <Card className="border-2 border-blue-200">
-            <CardContent className="p-8 text-center">
-              <ShoppingCart className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600">Nenhum item encontrado</p>
-            </CardContent>
-          </Card>
-        )}
+        {/* Summary */}
+        <div className="mt-6 p-4 bg-gray-100 rounded-lg shadow-inner">
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">Resumo da Lista</h3>
+          <div className="flex justify-between items-center text-gray-800">
+            <span>Total Estimado:</span>
+            <span className="font-bold">R$ {totalEstimated.toFixed(2).replace(".", ",")}</span>
+          </div>
+          <div className="flex justify-between items-center text-gray-800">
+            <span>Total Comprado:</span>
+            <span className="font-bold text-green-600">R$ {totalPurchased.toFixed(2).replace(".", ",")}</span>
+          </div>
+          <div className="flex justify-between items-center text-gray-800">
+            <span>Itens Pendentes:</span>
+            <span className="font-bold text-red-600">{shoppingItems.filter((item) => !item.isPurchased).length}</span>
+          </div>
+        </div>
       </div>
     </div>
   )

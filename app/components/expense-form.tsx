@@ -2,403 +2,370 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, Save } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { format } from "date-fns"
+import { CalendarIcon, DollarSign, Tag, User, Users, Check, X } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface ExpenseFormProps {
-  onBack: () => void
+  familyMembers: { id: string; name: string; email: string; role: string }[]
   onSave: () => void
 }
 
-export default function ExpenseForm({ onBack, onSave }: ExpenseFormProps) {
-  const [formData, setFormData] = useState({
-    amount: "",
-    description: "",
-    category: "",
-    member: "",
-    date: new Date().toISOString().split("T")[0],
-    notes: "",
-  })
-
-  const [divisionType, setDivisionType] = useState<"equal" | "percentage" | "value">("equal")
+export default function ExpenseForm({ familyMembers, onSave }: ExpenseFormProps) {
+  const [value, setValue] = useState("")
+  const [date, setDate] = useState<Date | undefined>(new Date())
+  const [category, setCategory] = useState("")
+  const [payer, setPayer] = useState("")
+  const [notes, setNotes] = useState("")
+  const [splitType, setSplitType] = useState<"equal" | "percentage" | "value">("equal")
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
-  const [memberDivisions, setMemberDivisions] = useState<Record<string, number>>({})
+  const [splitValues, setSplitValues] = useState<{ [key: string]: number }>({})
+  const [splitPercentages, setSplitPercentages] = useState<{ [key: string]: number }>({})
+  const [totalSplitValue, setTotalSplitValue] = useState(0)
+  const [totalSplitPercentage, setTotalSplitPercentage] = useState(0)
 
-  const categories = ["Alimentação", "Transporte", "Saúde", "Educação", "Lazer", "Casa", "Roupas", "Outros"]
+  const categories = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Contas", "Outros"]
 
-  const members = ["João Silva", "Maria Silva", "Pedro Silva", "Ana Silva"]
+  useEffect(() => {
+    // Initialize split values/percentages when members change
+    const initialSplit: { [key: string]: number } = {}
+    selectedMembers.forEach((memberId) => {
+      initialSplit[memberId] = 0
+    })
+    setSplitValues(initialSplit)
+    setSplitPercentages(initialSplit)
+  }, [selectedMembers])
+
+  useEffect(() => {
+    const parsedValue = Number.parseFloat(value.replace(",", ".")) || 0
+    if (splitType === "equal" && selectedMembers.length > 0) {
+      const perMember = parsedValue / selectedMembers.length
+      const newSplit: { [key: string]: number } = {}
+      selectedMembers.forEach((memberId) => {
+        newSplit[memberId] = perMember
+      })
+      setSplitValues(newSplit)
+      setTotalSplitValue(parsedValue)
+    } else if (splitType === "value") {
+      const sum = Object.values(splitValues).reduce((acc, val) => acc + val, 0)
+      setTotalSplitValue(sum)
+    } else if (splitType === "percentage") {
+      const sum = Object.values(splitPercentages).reduce((acc, val) => acc + val, 0)
+      setTotalSplitPercentage(sum)
+      const newSplitValues: { [key: string]: number } = {}
+      selectedMembers.forEach((memberId) => {
+        newSplitValues[memberId] = (parsedValue * (splitPercentages[memberId] || 0)) / 100
+      })
+      setSplitValues(newSplitValues)
+    }
+  }, [value, splitType, selectedMembers, splitValues, splitPercentages])
+
+  const handleMemberSelect = (memberId: string, isChecked: boolean) => {
+    setSelectedMembers((prev) => (isChecked ? [...prev, memberId] : prev.filter((id) => id !== memberId)))
+  }
+
+  const handleSplitValueChange = (memberId: string, val: string) => {
+    const numVal = Number.parseFloat(val.replace(",", ".")) || 0
+    setSplitValues((prev) => ({ ...prev, [memberId]: numVal }))
+  }
+
+  const handleSplitPercentageChange = (memberId: string, val: string) => {
+    const numVal = Number.parseFloat(val.replace(",", ".")) || 0
+    setSplitPercentages((prev) => ({ ...prev, [memberId]: numVal }))
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    const parsedValue = Number.parseFloat(value.replace(",", ".")) || 0
 
-    // Validação da divisão
     if (selectedMembers.length === 0) {
-      alert("Selecione pelo menos um membro para dividir a despesa")
+      alert("Selecione pelo menos um membro para dividir a despesa.")
       return
     }
 
-    if (divisionType === "percentage") {
-      const totalPercentage = Object.values(memberDivisions).reduce((sum, val) => sum + val, 0)
-      if (Math.abs(totalPercentage - 100) > 0.1) {
-        alert("A soma dos percentuais deve ser 100%")
-        return
-      }
+    if (splitType === "value" && totalSplitValue !== parsedValue) {
+      alert("A soma dos valores divididos deve ser igual ao valor total da despesa.")
+      return
     }
 
-    if (divisionType === "value") {
-      const totalDivided = Object.values(memberDivisions).reduce((sum, val) => sum + val, 0)
-      const totalAmount = Number.parseFloat(formData.amount || "0")
-      if (Math.abs(totalDivided - totalAmount) > 0.01) {
-        alert("A soma dos valores divididos deve ser igual ao valor total da despesa")
-        return
-      }
+    if (splitType === "percentage" && totalSplitPercentage !== 100) {
+      alert("A soma dos percentuais deve ser 100%.")
+      return
     }
 
-    // Mock save with division data
     const expenseData = {
-      ...formData,
-      divisionType,
-      selectedMembers,
-      memberDivisions:
-        divisionType === "equal"
-          ? selectedMembers.reduce(
-              (acc, member) => ({
-                ...acc,
-                [member]: Number.parseFloat(formData.amount || "0") / selectedMembers.length,
-              }),
-              {},
-            )
-          : memberDivisions,
+      value: parsedValue,
+      date: date?.toISOString(),
+      category,
+      payer,
+      notes,
+      splitType,
+      splitDetails: selectedMembers.map((memberId) => ({
+        memberId,
+        amount: splitValues[memberId] || 0,
+        percentage: splitPercentages[memberId] || 0,
+      })),
     }
-
-    console.log("Expense with division:", expenseData)
+    console.log("Despesa a ser salva:", expenseData)
+    alert("Despesa salva com sucesso! (Mock)")
     onSave()
   }
 
+  const parsedValue = Number.parseFloat(value.replace(",", ".")) || 0
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
-      <div className="bg-[#007A33] text-white p-4">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-emerald-700">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-xl font-bold">Nova Despesa</h1>
-        </div>
-      </div>
+    <Card className="w-full bg-white text-[#007A33] rounded-lg shadow-lg">
+      <CardHeader className="text-center border-b pb-4">
+        <CardTitle className="text-2xl font-bold">Criar Nova Despesa</CardTitle>
+      </CardHeader>
+      <CardContent className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Expense Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="value" className="flex items-center gap-2 mb-1">
+                <DollarSign className="h-4 w-4" /> Valor
+              </Label>
+              <Input
+                id="value"
+                type="text"
+                placeholder="R$ 0,00"
+                value={value}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9,.]/g, "")
+                  setValue(val)
+                }}
+                required
+                className="border-[#007A33] focus:ring-[#007A33]"
+              />
+            </div>
+            <div>
+              <Label htmlFor="date" className="flex items-center gap-2 mb-1">
+                <CalendarIcon className="h-4 w-4" /> Data
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={`w-full justify-start text-left font-normal ${!date && "text-muted-foreground"}`}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP") : <span>Selecione uma data</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <Label htmlFor="category" className="flex items-center gap-2 mb-1">
+                <Tag className="h-4 w-4" /> Categoria
+              </Label>
+              <Select value={category} onValueChange={setCategory} required>
+                <SelectTrigger className="w-full border-[#007A33] focus:ring-[#007A33]">
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="payer" className="flex items-center gap-2 mb-1">
+                <User className="h-4 w-4" /> Pago por
+              </Label>
+              <Select value={payer} onValueChange={setPayer} required>
+                <SelectTrigger className="w-full border-[#007A33] focus:ring-[#007A33]">
+                  <SelectValue placeholder="Quem pagou?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {familyMembers.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-      <div className="p-4">
-        <Card className="max-w-md mx-auto border-2 border-emerald-200">
-          <CardHeader>
-            <CardTitle className="text-center text-xl text-gray-800">Adicionar Despesa</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="amount">Valor (R$)</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  placeholder="0,00"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33] text-lg font-semibold text-center"
-                  required
-                />
-              </div>
+          <div>
+            <Label htmlFor="notes" className="mb-1">
+              Observações
+            </Label>
+            <Textarea
+              id="notes"
+              placeholder="Detalhes adicionais sobre a despesa..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="border-[#007A33] focus:ring-[#007A33]"
+            />
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição</Label>
-                <Input
-                  id="description"
-                  placeholder="Ex: Supermercado, Gasolina..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33]"
-                  required
-                />
-              </div>
+          {/* Expense Splitting Section */}
+          <div className="bg-green-50 p-4 rounded-lg border border-green-200 space-y-4">
+            <h3 className="text-lg font-semibold text-[#007A33] flex items-center gap-2">
+              <Users className="h-5 w-5" /> Dividir com
+            </h3>
 
-              <div className="space-y-2">
-                <Label>Categoria</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value })}
+            {/* Member Selection */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {familyMembers.map((member) => (
+                <Label
+                  key={member.id}
+                  htmlFor={`member-${member.id}`}
+                  className="flex items-center space-x-2 p-2 border rounded-md cursor-pointer hover:bg-green-100"
                 >
-                  <SelectTrigger className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33]">
-                    <SelectValue placeholder="Selecione uma categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  <Checkbox
+                    id={`member-${member.id}`}
+                    checked={selectedMembers.includes(member.id)}
+                    onCheckedChange={(checked) => handleMemberSelect(member.id, checked as boolean)}
+                    className="data-[state=checked]:bg-[#007A33] data-[state=checked]:text-white"
+                  />
+                  <span>{member.name}</span>
+                </Label>
+              ))}
+            </div>
 
-              <div className="space-y-2">
-                <Label>Quem Pagou</Label>
-                <Select value={formData.member} onValueChange={(value) => setFormData({ ...formData, member: value })}>
-                  <SelectTrigger className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33]">
-                    <SelectValue placeholder="Quem fez o pagamento?" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {members.map((member) => (
-                      <SelectItem key={member} value={member}>
-                        {member}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="date">Data</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33]"
-                  required
-                />
-              </div>
-
-              {/* Nova seção de divisão */}
-              <div className="space-y-4 p-4 bg-emerald-50 rounded-xl">
-                <Label className="text-base font-semibold text-gray-800">Dividir Despesa</Label>
-
-                {/* Seleção de membros */}
-                <div className="space-y-2">
-                  <Label className="text-sm">Membros que vão dividir:</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {members.map((member) => (
-                      <label
-                        key={member}
-                        className="flex items-center space-x-2 p-2 bg-white rounded-lg border border-emerald-200"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedMembers.includes(member)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedMembers([...selectedMembers, member])
-                            } else {
-                              setSelectedMembers(selectedMembers.filter((m) => m !== member))
-                              const newDivisions = { ...memberDivisions }
-                              delete newDivisions[member]
-                              setMemberDivisions(newDivisions)
-                            }
-                          }}
-                          className="rounded border-emerald-300 text-[#007A33] focus:ring-[#007A33]"
-                        />
-                        <span className="text-sm text-gray-700">{member}</span>
-                      </label>
-                    ))}
-                  </div>
+            {selectedMembers.length > 0 && (
+              <>
+                {/* Split Type Selection */}
+                <div className="flex space-x-2 mt-4">
+                  <Button
+                    type="button"
+                    variant={splitType === "equal" ? "default" : "outline"}
+                    onClick={() => setSplitType("equal")}
+                    className={
+                      splitType === "equal"
+                        ? "bg-[#007A33] hover:bg-[#005F28] text-white"
+                        : "text-[#007A33] border-[#007A33] hover:bg-green-100"
+                    }
+                  >
+                    Divisão Igual
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={splitType === "percentage" ? "default" : "outline"}
+                    onClick={() => setSplitType("percentage")}
+                    className={
+                      splitType === "percentage"
+                        ? "bg-[#007A33] hover:bg-[#005F28] text-white"
+                        : "text-[#007A33] border-[#007A33] hover:bg-green-100"
+                    }
+                  >
+                    Percentual
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={splitType === "value" ? "default" : "outline"}
+                    onClick={() => setSplitType("value")}
+                    className={
+                      splitType === "value"
+                        ? "bg-[#007A33] hover:bg-[#005F28] text-white"
+                        : "text-[#007A33] border-[#007A33] hover:bg-green-100"
+                    }
+                  >
+                    Valor
+                  </Button>
                 </div>
 
-                {selectedMembers.length > 0 && (
-                  <>
-                    {/* Tipo de divisão */}
-                    <div className="space-y-2">
-                      <Label className="text-sm">Como dividir:</Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setDivisionType("equal")}
-                          className={`p-2 rounded-lg text-xs font-medium transition-colors ${
-                            divisionType === "equal"
-                              ? "bg-[#007A33] text-white"
-                              : "bg-white border border-emerald-200 text-gray-700 hover:bg-emerald-50"
-                          }`}
-                        >
-                          Igual
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDivisionType("percentage")}
-                          className={`p-2 rounded-lg text-xs font-medium transition-colors ${
-                            divisionType === "percentage"
-                              ? "bg-[#007A33] text-white"
-                              : "bg-white border border-emerald-200 text-gray-700 hover:bg-emerald-50"
-                          }`}
-                        >
-                          Percentual
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDivisionType("value")}
-                          className={`p-2 rounded-lg text-xs font-medium transition-colors ${
-                            divisionType === "value"
-                              ? "bg-[#007A33] text-white"
-                              : "bg-white border border-emerald-200 text-gray-700 hover:bg-emerald-50"
-                          }`}
-                        >
-                          Valor
-                        </button>
-                      </div>
-                    </div>
+                {/* Split Details Input */}
+                <div className="space-y-3 mt-4">
+                  {selectedMembers.map((memberId) => {
+                    const member = familyMembers.find((m) => m.id === memberId)
+                    if (!member) return null
 
-                    {/* Divisão por igual */}
-                    {divisionType === "equal" && (
-                      <div className="p-3 bg-white rounded-lg border border-emerald-200">
-                        <p className="text-sm text-gray-600 mb-2">
-                          Divisão igual entre {selectedMembers.length} membros:
-                        </p>
-                        <div className="space-y-1">
-                          {selectedMembers.map((member) => (
-                            <div key={member} className="flex justify-between items-center text-sm">
-                              <span className="text-gray-700">{member}</span>
-                              <span className="font-semibold text-[#007A33]">
-                                R${" "}
-                                {formData.amount
-                                  ? (Number.parseFloat(formData.amount) / selectedMembers.length).toFixed(2)
-                                  : "0,00"}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Divisão por percentual */}
-                    {divisionType === "percentage" && (
-                      <div className="space-y-3">
-                        <p className="text-sm text-gray-600">Defina o percentual para cada membro:</p>
-                        {selectedMembers.map((member) => (
-                          <div key={member} className="flex items-center gap-2">
-                            <span className="text-sm text-gray-700 w-20 flex-shrink-0">{member.split(" ")[0]}</span>
+                    return (
+                      <div key={member.id} className="flex items-center gap-2">
+                        <Label className="w-24 shrink-0">{member.name}:</Label>
+                        {splitType === "equal" && (
+                          <Input
+                            type="text"
+                            value={`R$ ${(splitValues[memberId] || 0).toFixed(2).replace(".", ",")}`}
+                            readOnly
+                            className="bg-gray-100 border-gray-300 text-gray-700"
+                          />
+                        )}
+                        {splitType === "percentage" && (
+                          <>
                             <Input
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="0.1"
-                              placeholder="0"
-                              value={memberDivisions[member] || ""}
-                              onChange={(e) =>
-                                setMemberDivisions({
-                                  ...memberDivisions,
-                                  [member]: Number.parseFloat(e.target.value) || 0,
-                                })
-                              }
-                              className="flex-1 rounded-lg border-2 border-emerald-200 focus:border-[#007A33] text-center"
+                              type="text"
+                              value={(splitPercentages[memberId] || 0).toString().replace(".", ",")}
+                              onChange={(e) => handleSplitPercentageChange(memberId, e.target.value)}
+                              className="w-20 border-[#007A33] focus:ring-[#007A33]"
                             />
-                            <span className="text-sm text-gray-500 w-8">%</span>
-                            <span className="text-sm font-semibold text-[#007A33] w-16 text-right">
-                              R${" "}
-                              {formData.amount && memberDivisions[member]
-                                ? ((Number.parseFloat(formData.amount) * memberDivisions[member]) / 100).toFixed(2)
-                                : "0,00"}
-                            </span>
-                          </div>
-                        ))}
-                        <div className="p-2 bg-white rounded-lg border border-emerald-200">
-                          <div className="flex justify-between text-sm">
-                            <span>Total:</span>
-                            <span
-                              className={`font-semibold ${
-                                Object.values(memberDivisions).reduce((sum, val) => sum + val, 0) === 100
-                                  ? "text-green-600"
-                                  : "text-red-600"
-                              }`}
-                            >
-                              {Object.values(memberDivisions)
-                                .reduce((sum, val) => sum + val, 0)
-                                .toFixed(1)}
-                              %
-                            </span>
-                          </div>
-                        </div>
+                            <span className="mr-2">%</span>
+                            <Input
+                              type="text"
+                              value={`R$ ${((parsedValue * (splitPercentages[memberId] || 0)) / 100).toFixed(2).replace(".", ",")}`}
+                              readOnly
+                              className="flex-1 bg-gray-100 border-gray-300 text-gray-700"
+                            />
+                          </>
+                        )}
+                        {splitType === "value" && (
+                          <Input
+                            type="text"
+                            value={(splitValues[memberId] || 0).toFixed(2).replace(".", ",")}
+                            onChange={(e) => handleSplitValueChange(memberId, e.target.value)}
+                            className="flex-1 border-[#007A33] focus:ring-[#007A33]"
+                          />
+                        )}
                       </div>
-                    )}
+                    )
+                  })}
+                </div>
 
-                    {/* Divisão por valor */}
-                    {divisionType === "value" && (
-                      <div className="space-y-3">
-                        <p className="text-sm text-gray-600">Defina o valor para cada membro:</p>
-                        {selectedMembers.map((member) => (
-                          <div key={member} className="flex items-center gap-2">
-                            <span className="text-sm text-gray-700 w-20 flex-shrink-0">{member.split(" ")[0]}</span>
-                            <div className="flex-1 relative">
-                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                                R$
-                              </span>
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                placeholder="0,00"
-                                value={memberDivisions[member] || ""}
-                                onChange={(e) =>
-                                  setMemberDivisions({
-                                    ...memberDivisions,
-                                    [member]: Number.parseFloat(e.target.value) || 0,
-                                  })
-                                }
-                                className="pl-8 rounded-lg border-2 border-emerald-200 focus:border-[#007A33] text-center"
-                              />
-                            </div>
-                          </div>
-                        ))}
-                        <div className="p-2 bg-white rounded-lg border border-emerald-200">
-                          <div className="flex justify-between text-sm">
-                            <span>Total dividido:</span>
-                            <span
-                              className={`font-semibold ${
-                                Object.values(memberDivisions).reduce((sum, val) => sum + val, 0) ===
-                                Number.parseFloat(formData.amount || "0")
-                                  ? "text-green-600"
-                                  : "text-red-600"
-                              }`}
-                            >
-                              R${" "}
-                              {Object.values(memberDivisions)
-                                .reduce((sum, val) => sum + val, 0)
-                                .toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-xs text-gray-500 mt-1">
-                            <span>Valor total:</span>
-                            <span>R$ {formData.amount || "0,00"}</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
+                {/* Validation Summary */}
+                {splitType === "value" && (
+                  <div
+                    className={`text-sm font-semibold flex items-center gap-2 ${totalSplitValue === parsedValue ? "text-green-600" : "text-red-600"}`}
+                  >
+                    Total Dividido: R$ {totalSplitValue.toFixed(2).replace(".", ",")}
+                    {totalSplitValue === parsedValue ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                  </div>
                 )}
-              </div>
+                {splitType === "percentage" && (
+                  <div
+                    className={`text-sm font-semibold flex items-center gap-2 ${totalSplitPercentage === 100 ? "text-green-600" : "text-red-600"}`}
+                  >
+                    Total Percentual: {totalSplitPercentage}%
+                    {totalSplitPercentage === 100 ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="notes">Observações (opcional)</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Detalhes adicionais..."
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33] min-h-[80px]"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full bg-[#007A33] hover:bg-[#005A26] text-white font-semibold py-3 rounded-xl"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Salvar Despesa
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+          <div className="flex justify-end gap-4 mt-6">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onSave}
+              className="text-[#007A33] border-[#007A33] hover:bg-gray-100 bg-transparent"
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" className="bg-[#007A33] hover:bg-[#005F28] text-white">
+              Salvar Despesa
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   )
 }

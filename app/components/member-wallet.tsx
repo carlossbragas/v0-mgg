@@ -3,699 +3,698 @@
 import type React from "react"
 
 import { useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import {
-  ArrowLeft,
-  Wallet,
-  TrendingUp,
-  TrendingDown,
-  Utensils,
-  Car,
-  Plus,
-  Edit,
-  Trash2,
-  Repeat,
-  DollarSign,
-} from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { DollarSign, Trash2, CalendarIcon } from "lucide-react"
+import { format } from "date-fns"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { Switch } from "@/components/ui/switch"
 
 interface MemberWalletProps {
-  onBack: () => void
+  currentUser: { id: string; name: string; email: string; role: string } | null
 }
 
-export default function MemberWallet({ onBack }: MemberWalletProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "balance" | "recurring">("overview")
-  const [showBalanceForm, setShowBalanceForm] = useState(false)
-  const [showRecurringForm, setShowRecurringForm] = useState(false)
+interface Transaction {
+  id: string
+  type: "income" | "expense"
+  amount: number
+  description: string
+  date: Date
+}
 
-  // Form states
-  const [balanceForm, setBalanceForm] = useState({
-    amount: "",
-    description: "",
-    type: "income" as "income" | "expense",
-  })
+interface RecurringExpense {
+  id: string
+  description: string
+  amount: number
+  category: string
+  frequency: "daily" | "weekly" | "monthly" | "annually"
+  dayOfMonth?: number // For monthly
+  dayOfWeek?: number // For weekly (0=Sunday, 6=Saturday)
+  monthOfYear?: number // For annually (0=Jan, 11=Dec)
+  dayOfYear?: number // For annually (1-366)
+  startDate: Date
+  endDate?: Date
+  isActive: boolean
+}
 
-  const [recurringForm, setRecurringForm] = useState({
-    description: "",
-    amount: "",
-    category: "",
-    frequency: "monthly" as "daily" | "weekly" | "monthly" | "yearly",
-    dayOfMonth: "1",
-    dayOfWeek: "1",
-    dayOfYear: new Date().toISOString().split("T")[0],
-    startDate: new Date().toISOString().split("T")[0],
-    endDate: "",
-    isActive: true,
-  })
-
-  // Mock data for current user
-  const userData = {
-    name: "João Silva",
-    balance: 850.3,
-    monthlySpent: 523.4,
-    role: "admin",
-  }
-
-  const personalExpenses = [
+export default function MemberWallet({ currentUser }: MemberWalletProps) {
+  const [activeTab, setActiveTab] = useState("overview")
+  const [balance, setBalance] = useState(1500.0) // Mock initial balance
+  const [transactions, setTransactions] = useState<Transaction[]>([
+    { id: "t1", type: "income", amount: 2000, description: "Salário", date: new Date("2025-07-01") },
+    { id: "t2", type: "expense", amount: 450, description: "Aluguel", date: new Date("2025-07-05") },
+    { id: "t3", type: "expense", amount: 120, description: "Supermercado", date: new Date("2025-07-10") },
+  ])
+  const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([
     {
-      id: 1,
-      description: "Supermercado Extra",
-      amount: 156.8,
-      category: "Alimentação",
-      date: "2024-01-15",
-      type: "expense",
-    },
-    {
-      id: 2,
-      description: "Gasolina Posto Shell",
-      amount: 89.5,
-      category: "Transporte",
-      date: "2024-01-14",
-      type: "expense",
-    },
-    {
-      id: 3,
-      description: "Salário depositado",
-      amount: 3500.0,
-      category: "Salário",
-      date: "2024-01-13",
-      type: "income",
-    },
-    { id: 4, description: "Farmácia Drogasil", amount: 45.2, category: "Saúde", date: "2024-01-12", type: "expense" },
-    { id: 5, description: "Netflix", amount: 32.9, category: "Lazer", date: "2024-01-11", type: "expense" },
-  ]
-
-  // Mock recurring expenses
-  const recurringExpenses = [
-    {
-      id: 1,
+      id: "rec1",
       description: "Aluguel",
-      amount: 1200.0,
-      category: "Casa",
+      amount: 1500,
+      category: "Moradia",
       frequency: "monthly",
       dayOfMonth: 5,
+      startDate: new Date("2025-01-01"),
       isActive: true,
-      nextDate: "2024-02-05",
     },
     {
-      id: 2,
-      description: "Financiamento do Carro",
-      amount: 450.0,
-      category: "Transporte",
-      frequency: "monthly",
-      dayOfMonth: 10,
-      isActive: true,
-      nextDate: "2024-02-10",
-    },
-    {
-      id: 3,
-      description: "Condomínio",
-      amount: 280.0,
-      category: "Casa",
+      id: "rec2",
+      description: "Assinatura Streaming",
+      amount: 35,
+      category: "Lazer",
       frequency: "monthly",
       dayOfMonth: 15,
+      startDate: new Date("2025-03-01"),
       isActive: true,
-      nextDate: "2024-02-15",
     },
     {
-      id: 4,
-      description: "Academia",
-      amount: 89.9,
-      category: "Saúde",
-      frequency: "monthly",
-      dayOfMonth: 1,
-      isActive: false,
-      nextDate: "2024-02-01",
-    },
-  ]
-
-  const categories = ["Alimentação", "Transporte", "Saúde", "Educação", "Lazer", "Casa", "Roupas", "Salário", "Outros"]
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "Alimentação":
-        return <Utensils className="w-4 h-4 text-white" />
-      case "Transporte":
-        return <Car className="w-4 h-4 text-white" />
-      case "Saúde":
-        return <Plus className="w-4 h-4 text-white" />
-      default:
-        return <Wallet className="w-4 h-4 text-white" />
-    }
-  }
-
-  const getFrequencyText = (frequency: string) => {
-    switch (frequency) {
-      case "daily":
-        return "Diário"
-      case "weekly":
-        return "Semanal"
-      case "monthly":
-        return "Mensal"
-      case "yearly":
-        return "Anual"
-      default:
-        return frequency
-    }
-  }
-
-  const handleBalanceSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Mock save balance
-    console.log("Balance entry:", balanceForm)
-    setBalanceForm({ amount: "", description: "", type: "income" })
-    setShowBalanceForm(false)
-  }
-
-  const handleRecurringSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Mock save recurring expense
-    console.log("Recurring expense:", recurringForm)
-    setRecurringForm({
-      description: "",
-      amount: "",
-      category: "",
-      frequency: "monthly",
-      dayOfMonth: "1",
-      dayOfWeek: "1",
-      dayOfYear: new Date().toISOString().split("T")[0],
-      startDate: new Date().toISOString().split("T")[0],
-      endDate: "",
+      id: "rec3",
+      description: "Seguro Carro",
+      amount: 1200,
+      category: "Transporte",
+      frequency: "annually",
+      monthOfYear: 8, // September (0-indexed)
+      dayOfYear: 1, // Day of month
+      startDate: new Date("2025-09-01"),
       isActive: true,
-    })
-    setShowRecurringForm(false)
+    },
+  ])
+
+  // State for new transaction form
+  const [newTransactionType, setNewTransactionType] = useState<"income" | "expense">("expense")
+  const [newTransactionAmount, setNewTransactionAmount] = useState("")
+  const [newTransactionDescription, setNewTransactionDescription] = useState("")
+  const [newTransactionDate, setNewTransactionDate] = useState<Date | undefined>(new Date())
+
+  // State for new recurring expense form
+  const [newRecDescription, setNewRecDescription] = useState("")
+  const [newRecAmount, setNewRecAmount] = useState("")
+  const [newRecCategory, setNewRecCategory] = useState("")
+  const [newRecFrequency, setNewRecFrequency] = useState<"daily" | "weekly" | "monthly" | "annually" | "">("")
+  const [newRecDayOfMonth, setNewRecDayOfMonth] = useState<number | undefined>(undefined)
+  const [newRecDayOfWeek, setNewRecDayOfWeek] = useState<number | undefined>(undefined)
+  const [newRecMonthOfYear, setNewRecMonthOfYear] = useState<number | undefined>(undefined)
+  const [newRecDayOfYear, setNewRecDayOfYear] = useState<number | undefined>(undefined)
+  const [newRecStartDate, setNewRecStartDate] = useState<Date | undefined>(new Date())
+  const [newRecEndDate, setNewRecEndDate] = useState<Date | undefined>(undefined)
+
+  const categories = ["Alimentação", "Moradia", "Transporte", "Saúde", "Educação", "Lazer", "Contas", "Outros"]
+
+  const handleAddTransaction = (e: React.FormEvent) => {
+    e.preventDefault()
+    const amount = Number.parseFloat(newTransactionAmount.replace(",", "."))
+    if (isNaN(amount) || !newTransactionDescription || !newTransactionDate) {
+      alert("Preencha todos os campos da transação.")
+      return
+    }
+
+    const newTransaction: Transaction = {
+      id: `t${transactions.length + 1}`,
+      type: newTransactionType,
+      amount: amount,
+      description: newTransactionDescription,
+      date: newTransactionDate,
+    }
+
+    setTransactions((prev) => [...prev, newTransaction])
+    setBalance((prev) => (newTransactionType === "income" ? prev + amount : prev - amount))
+    setNewTransactionAmount("")
+    setNewTransactionDescription("")
+    setNewTransactionDate(new Date())
+    alert("Transação adicionada com sucesso!")
   }
+
+  const handleDeleteTransaction = (id: string) => {
+    if (confirm("Tem certeza que deseja excluir esta transação?")) {
+      const transactionToDelete = transactions.find((t) => t.id === id)
+      if (transactionToDelete) {
+        setTransactions((prev) => prev.filter((t) => t.id !== id))
+        setBalance((prev) =>
+          transactionToDelete.type === "income" ? prev - transactionToDelete.amount : prev + transactionToDelete.amount,
+        )
+        alert("Transação excluída!")
+      }
+    }
+  }
+
+  const handleAddRecurringExpense = (e: React.FormEvent) => {
+    e.preventDefault()
+    const amount = Number.parseFloat(newRecAmount.replace(",", "."))
+    if (isNaN(amount) || !newRecDescription || !newRecCategory || !newRecFrequency || !newRecStartDate) {
+      alert("Preencha todos os campos obrigatórios da despesa recorrente.")
+      return
+    }
+
+    const newRecurring: RecurringExpense = {
+      id: `rec${recurringExpenses.length + 1}`,
+      description: newRecDescription,
+      amount: amount,
+      category: newRecCategory,
+      frequency: newRecFrequency as any,
+      startDate: newRecStartDate,
+      endDate: newRecEndDate,
+      isActive: true,
+    }
+
+    if (newRecFrequency === "monthly") newRecurring.dayOfMonth = newRecDayOfMonth
+    if (newRecFrequency === "weekly") newRecurring.dayOfWeek = newRecDayOfWeek
+    if (newRecFrequency === "annually") {
+      newRecurring.monthOfYear = newRecMonthOfYear
+      newRecurring.dayOfYear = newRecDayOfYear
+    }
+
+    setRecurringExpenses((prev) => [...prev, newRecurring])
+    setNewRecDescription("")
+    setNewRecAmount("")
+    setNewRecCategory("")
+    setNewRecFrequency("")
+    setNewRecDayOfMonth(undefined)
+    setNewRecDayOfWeek(undefined)
+    setNewRecMonthOfYear(undefined)
+    setNewRecDayOfYear(undefined)
+    setNewRecStartDate(new Date())
+    setNewRecEndDate(undefined)
+    alert("Despesa recorrente adicionada com sucesso!")
+  }
+
+  const handleToggleRecurringStatus = (id: string) => {
+    setRecurringExpenses((prev) => prev.map((rec) => (rec.id === id ? { ...rec, isActive: !rec.isActive } : rec)))
+  }
+
+  const handleDeleteRecurring = (id: string) => {
+    if (confirm("Tem certeza que deseja excluir esta despesa recorrente?")) {
+      setRecurringExpenses((prev) => prev.filter((rec) => rec.id !== id))
+      alert("Despesa recorrente excluída!")
+    }
+  }
+
+  const getNextOccurrence = (rec: RecurringExpense): Date | null => {
+    const now = new Date()
+    const nextDate = new Date(rec.startDate)
+
+    if (rec.endDate && nextDate > rec.endDate) return null
+
+    while (nextDate < now) {
+      if (rec.frequency === "daily") {
+        nextDate.setDate(nextDate.getDate() + 1)
+      } else if (rec.frequency === "weekly") {
+        nextDate.setDate(nextDate.getDate() + 7)
+      } else if (rec.frequency === "monthly") {
+        nextDate.setMonth(nextDate.getMonth() + 1)
+        if (rec.dayOfMonth) {
+          nextDate.setDate(Math.min(rec.dayOfMonth, daysInMonth(nextDate.getFullYear(), nextDate.getMonth())))
+        }
+      } else if (rec.frequency === "annually") {
+        nextDate.setFullYear(nextDate.getFullYear() + 1)
+        if (rec.monthOfYear !== undefined && rec.dayOfYear !== undefined) {
+          nextDate.setMonth(rec.monthOfYear)
+          nextDate.setDate(rec.dayOfYear)
+        }
+      }
+      if (rec.endDate && nextDate > rec.endDate) return null
+    }
+    return nextDate
+  }
+
+  const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
-      <div className="bg-[#007A33] text-white p-4">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-emerald-700">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold">Minha Carteira</h1>
-            <p className="text-emerald-100 text-sm">{userData.name}</p>
-          </div>
-        </div>
-      </div>
+    <Card className="w-full bg-white text-[#007A33] rounded-lg shadow-lg">
+      <CardHeader className="text-center border-b pb-4">
+        <CardTitle className="text-2xl font-bold">Carteira de {currentUser?.name || "Membro"}</CardTitle>
+      </CardHeader>
+      <CardContent className="p-6 space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 bg-gray-200 rounded-lg p-1 mb-4">
+            <TabsTrigger
+              value="overview"
+              className="data-[state=active]:bg-[#007A33] data-[state=active]:text-white rounded-md p-2"
+            >
+              Visão Geral
+            </TabsTrigger>
+            <TabsTrigger
+              value="transactions"
+              className="data-[state=active]:bg-[#007A33] data-[state=active]:text-white rounded-md p-2"
+            >
+              Saldo
+            </TabsTrigger>
+            <TabsTrigger
+              value="recurring"
+              className="data-[state=active]:bg-[#007A33] data-[state=active]:text-white rounded-md p-2"
+            >
+              Recorrentes
+            </TabsTrigger>
+          </TabsList>
 
-      {/* Tab Navigation */}
-      <div className="bg-white border-b border-emerald-200">
-        <div className="flex">
-          <Button
-            variant={activeTab === "overview" ? "default" : "ghost"}
-            onClick={() => setActiveTab("overview")}
-            className={`flex-1 rounded-none ${
-              activeTab === "overview" ? "bg-[#007A33] text-white" : "text-gray-600 hover:bg-emerald-50"
-            }`}
-          >
-            <Wallet className="w-4 h-4 mr-2" />
-            Visão Geral
-          </Button>
-          <Button
-            variant={activeTab === "balance" ? "default" : "ghost"}
-            onClick={() => setActiveTab("balance")}
-            className={`flex-1 rounded-none ${
-              activeTab === "balance" ? "bg-[#007A33] text-white" : "text-gray-600 hover:bg-emerald-50"
-            }`}
-          >
-            <DollarSign className="w-4 h-4 mr-2" />
-            Saldo
-          </Button>
-          <Button
-            variant={activeTab === "recurring" ? "default" : "ghost"}
-            onClick={() => setActiveTab("recurring")}
-            className={`flex-1 rounded-none ${
-              activeTab === "recurring" ? "bg-[#007A33] text-white" : "text-gray-600 hover:bg-emerald-50"
-            }`}
-          >
-            <Repeat className="w-4 h-4 mr-2" />
-            Recorrentes
-          </Button>
-        </div>
-      </div>
-
-      <div className="p-4 space-y-6">
-        {activeTab === "overview" && (
-          <>
-            {/* Balance Card */}
-            <Card className="border-2 border-emerald-200 bg-gradient-to-r from-emerald-500 to-[#007A33] text-white">
-              <CardContent className="p-6 text-center">
-                <Wallet className="w-12 h-12 mx-auto mb-3 opacity-80" />
-                <p className="text-emerald-100 text-sm mb-1">Saldo Atual</p>
-                <p className="text-3xl font-bold mb-2">R$ {userData.balance.toFixed(2)}</p>
-                <p className="text-emerald-100 text-sm">
-                  {userData.role === "admin" ? "Administrador" : "Membro"} da família
-                </p>
-              </CardContent>
+          <TabsContent value="overview" className="space-y-4">
+            <Card className="bg-green-50 border-l-4 border-[#007A33] p-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-[#007A33]">Saldo Atual</h3>
+                <p className="text-3xl font-bold text-[#007A33]">R$ {balance.toFixed(2).replace(".", ",")}</p>
+              </div>
+              <DollarSign className="h-12 w-12 text-[#007A33]" />
             </Card>
 
-            {/* Monthly Summary */}
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="border-2 border-emerald-200">
-                <CardContent className="p-4 text-center">
-                  <TrendingDown className="w-8 h-8 text-red-500 mx-auto mb-2" />
-                  <p className="text-xs text-gray-600 mb-1">Gasto do Mês</p>
-                  <p className="text-lg font-bold text-gray-800">R$ {userData.monthlySpent.toFixed(2)}</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-2 border-emerald-200">
-                <CardContent className="p-4 text-center">
-                  <TrendingUp className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                  <p className="text-xs text-gray-600 mb-1">Economia</p>
-                  <p className="text-lg font-bold text-gray-800">
-                    R$ {(userData.balance - userData.monthlySpent).toFixed(2)}
-                  </p>
-                </CardContent>
-              </Card>
+            <h3 className="text-xl font-semibold text-gray-700 mt-6 mb-4">Últimas Transações</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white rounded-lg shadow-sm">
+                <thead>
+                  <tr className="bg-gray-100 text-left text-gray-600">
+                    <th className="py-2 px-4 rounded-tl-lg">Data</th>
+                    <th className="py-2 px-4">Descrição</th>
+                    <th className="py-2 px-4 text-right rounded-tr-lg">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transactions
+                    .sort((a, b) => b.date.getTime() - a.date.getTime())
+                    .slice(0, 5)
+                    .map((t) => (
+                      <tr key={t.id} className="border-b last:border-b-0 hover:bg-gray-50">
+                        <td className="py-2 px-4 text-gray-800">{format(t.date, "dd/MM/yyyy")}</td>
+                        <td className="py-2 px-4 text-gray-800">{t.description}</td>
+                        <td
+                          className={`py-2 px-4 text-right font-semibold ${
+                            t.type === "income" ? "text-green-600" : "text-red-600"
+                          }`}
+                        >
+                          {t.type === "income" ? "+" : "-"} R$ {t.amount.toFixed(2).replace(".", ",")}
+                        </td>
+                      </tr>
+                    ))}
+                  {transactions.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="text-center py-4 text-gray-500">
+                        Nenhuma transação registrada.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
+          </TabsContent>
 
-            {/* Personal Expenses History */}
-            <Card className="border-2 border-emerald-200">
-              <CardHeader>
-                <CardTitle className="text-lg text-gray-800">Histórico Recente</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {personalExpenses.slice(0, 5).map((expense) => (
-                  <div key={expense.id} className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          expense.type === "income" ? "bg-green-500" : "bg-[#007A33]"
-                        }`}
-                      >
-                        {expense.type === "income" ? (
-                          <TrendingUp className="w-4 h-4 text-white" />
-                        ) : (
-                          getCategoryIcon(expense.category)
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-800 text-sm">{expense.description}</p>
-                        <p className="text-xs text-gray-600">
-                          {expense.date} • {expense.category}
-                        </p>
-                      </div>
-                    </div>
-                    <p
-                      className={`font-bold text-lg ${expense.type === "income" ? "text-green-600" : "text-gray-800"}`}
+          <TabsContent value="transactions" className="space-y-4">
+            <h3 className="text-xl font-semibold text-gray-700 mb-4">Adicionar Movimentação</h3>
+            <form onSubmit={handleAddTransaction} className="space-y-4 p-4 border rounded-lg bg-gray-50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="trans-type" className="flex items-center gap-2 mb-1">
+                    Tipo
+                  </Label>
+                  <Select
+                    value={newTransactionType}
+                    onValueChange={(value: "income" | "expense") => setNewTransactionType(value)}
+                  >
+                    <SelectTrigger className="w-full border-[#007A33] focus:ring-[#007A33]">
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="income">Entrada</SelectItem>
+                      <SelectItem value="expense">Saída</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="trans-amount" className="flex items-center gap-2 mb-1">
+                    Valor
+                  </Label>
+                  <Input
+                    id="trans-amount"
+                    type="text"
+                    placeholder="R$ 0,00"
+                    value={newTransactionAmount}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9,.]/g, "")
+                      setNewTransactionAmount(val)
+                    }}
+                    required
+                    className="border-[#007A33] focus:ring-[#007A33]"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="trans-description" className="flex items-center gap-2 mb-1">
+                  Descrição
+                </Label>
+                <Input
+                  id="trans-description"
+                  type="text"
+                  placeholder="Ex: Salário, Aluguel, Supermercado"
+                  value={newTransactionDescription}
+                  onChange={(e) => setNewTransactionDescription(e.target.value)}
+                  required
+                  className="border-[#007A33] focus:ring-[#007A33]"
+                />
+              </div>
+              <div>
+                <Label htmlFor="trans-date" className="flex items-center gap-2 mb-1">
+                  Data
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={`w-full justify-start text-left font-normal ${
+                        !newTransactionDate && "text-muted-foreground"
+                      }`}
                     >
-                      {expense.type === "income" ? "+" : "-"}R$ {expense.amount.toFixed(2)}
-                    </p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </>
-        )}
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newTransactionDate ? format(newTransactionDate, "PPP") : <span>Selecione uma data</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={newTransactionDate}
+                      onSelect={setNewTransactionDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <Button type="submit" className="w-full bg-[#007A33] hover:bg-[#005F28] text-white">
+                Adicionar Movimentação
+              </Button>
+            </form>
 
-        {activeTab === "balance" && (
-          <>
-            {/* Add Balance Button */}
-            <Card className="border-2 border-emerald-200">
-              <CardContent className="p-4">
-                <Button
-                  onClick={() => setShowBalanceForm(!showBalanceForm)}
-                  className="w-full bg-[#007A33] hover:bg-[#005A26] text-white rounded-xl p-4 h-auto flex items-center justify-center gap-2"
+            <h3 className="text-xl font-semibold text-gray-700 mt-6 mb-4">Histórico de Movimentações</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white rounded-lg shadow-sm">
+                <thead>
+                  <tr className="bg-gray-100 text-left text-gray-600">
+                    <th className="py-2 px-4 rounded-tl-lg">Data</th>
+                    <th className="py-2 px-4">Descrição</th>
+                    <th className="py-2 px-4 text-right">Valor</th>
+                    <th className="py-2 px-4 text-center rounded-tr-lg">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transactions
+                    .sort((a, b) => b.date.getTime() - a.date.getTime())
+                    .map((t) => (
+                      <tr key={t.id} className="border-b last:border-b-0 hover:bg-gray-50">
+                        <td className="py-2 px-4 text-gray-800">{format(t.date, "dd/MM/yyyy")}</td>
+                        <td className="py-2 px-4 text-gray-800">{t.description}</td>
+                        <td
+                          className={`py-2 px-4 text-right font-semibold ${
+                            t.type === "income" ? "text-green-600" : "text-red-600"
+                          }`}
+                        >
+                          {t.type === "income" ? "+" : "-"} R$ {t.amount.toFixed(2).replace(".", ",")}
+                        </td>
+                        <td className="py-2 px-4 text-center">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleDeleteTransaction(t.id)}
+                            className="text-red-500 border-red-500 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  {transactions.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="text-center py-4 text-gray-500">
+                        Nenhuma movimentação registrada.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="recurring" className="space-y-4">
+            <h3 className="text-xl font-semibold text-gray-700 mb-4">Adicionar Despesa Recorrente</h3>
+            <form onSubmit={handleAddRecurringExpense} className="space-y-4 p-4 border rounded-lg bg-gray-50">
+              <div>
+                <Label htmlFor="rec-description" className="flex items-center gap-2 mb-1">
+                  Descrição
+                </Label>
+                <Input
+                  id="rec-description"
+                  type="text"
+                  placeholder="Ex: Aluguel, Financiamento Carro"
+                  value={newRecDescription}
+                  onChange={(e) => setNewRecDescription(e.target.value)}
+                  required
+                  className="border-[#007A33] focus:ring-[#007A33]"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="rec-amount" className="flex items-center gap-2 mb-1">
+                    Valor
+                  </Label>
+                  <Input
+                    id="rec-amount"
+                    type="text"
+                    placeholder="R$ 0,00"
+                    value={newRecAmount}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9,.]/g, "")
+                      setNewRecAmount(val)
+                    }}
+                    required
+                    className="border-[#007A33] focus:ring-[#007A33]"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="rec-category" className="flex items-center gap-2 mb-1">
+                    Categoria
+                  </Label>
+                  <Select value={newRecCategory} onValueChange={setNewRecCategory} required>
+                    <SelectTrigger className="w-full border-[#007A33] focus:ring-[#007A33]">
+                      <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="rec-frequency" className="flex items-center gap-2 mb-1">
+                  Frequência
+                </Label>
+                <Select
+                  value={newRecFrequency}
+                  onValueChange={(value: typeof newRecFrequency) => setNewRecFrequency(value)}
+                  required
                 >
-                  <Plus className="w-5 h-5" />
-                  <span>Adicionar Entrada/Saída</span>
-                </Button>
-              </CardContent>
-            </Card>
+                  <SelectTrigger className="w-full border-[#007A33] focus:ring-[#007A33]">
+                    <SelectValue placeholder="Selecione a frequência" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Diário</SelectItem>
+                    <SelectItem value="weekly">Semanal</SelectItem>
+                    <SelectItem value="monthly">Mensal</SelectItem>
+                    <SelectItem value="annually">Anual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Balance Form */}
-            {showBalanceForm && (
-              <Card className="border-2 border-emerald-200">
-                <CardHeader>
-                  <CardTitle className="text-lg text-gray-800">Nova Movimentação</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleBalanceSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Tipo</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setBalanceForm({ ...balanceForm, type: "income" })}
-                          className={`p-3 rounded-xl text-sm font-medium transition-colors ${
-                            balanceForm.type === "income"
-                              ? "bg-green-500 text-white"
-                              : "bg-white border-2 border-emerald-200 text-gray-700 hover:bg-emerald-50"
-                          }`}
-                        >
-                          <TrendingUp className="w-4 h-4 mx-auto mb-1" />
-                          Entrada
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setBalanceForm({ ...balanceForm, type: "expense" })}
-                          className={`p-3 rounded-xl text-sm font-medium transition-colors ${
-                            balanceForm.type === "expense"
-                              ? "bg-red-500 text-white"
-                              : "bg-white border-2 border-emerald-200 text-gray-700 hover:bg-emerald-50"
-                          }`}
-                        >
-                          <TrendingDown className="w-4 h-4 mx-auto mb-1" />
-                          Saída
-                        </button>
-                      </div>
-                    </div>
+              {newRecFrequency === "monthly" && (
+                <div>
+                  <Label htmlFor="rec-day-month" className="flex items-center gap-2 mb-1">
+                    Dia do Mês
+                  </Label>
+                  <Input
+                    id="rec-day-month"
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={newRecDayOfMonth || ""}
+                    onChange={(e) => setNewRecDayOfMonth(Number.parseInt(e.target.value) || undefined)}
+                    placeholder="Ex: 5"
+                    required
+                    className="border-[#007A33] focus:ring-[#007A33]"
+                  />
+                </div>
+              )}
+              {newRecFrequency === "weekly" && (
+                <div>
+                  <Label htmlFor="rec-day-week" className="flex items-center gap-2 mb-1">
+                    Dia da Semana
+                  </Label>
+                  <Select
+                    value={newRecDayOfWeek?.toString() || ""}
+                    onValueChange={(value) => setNewRecDayOfWeek(Number.parseInt(value))}
+                    required
+                  >
+                    <SelectTrigger className="w-full border-[#007A33] focus:ring-[#007A33]">
+                      <SelectValue placeholder="Selecione o dia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">Domingo</SelectItem>
+                      <SelectItem value="1">Segunda-feira</SelectItem>
+                      <SelectItem value="2">Terça-feira</SelectItem>
+                      <SelectItem value="3">Quarta-feira</SelectItem>
+                      <SelectItem value="4">Quinta-feira</SelectItem>
+                      <SelectItem value="5">Sexta-feira</SelectItem>
+                      <SelectItem value="6">Sábado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {newRecFrequency === "annually" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="rec-month-year" className="flex items-center gap-2 mb-1">
+                      Mês
+                    </Label>
+                    <Select
+                      value={newRecMonthOfYear?.toString() || ""}
+                      onValueChange={(value) => setNewRecMonthOfYear(Number.parseInt(value))}
+                      required
+                    >
+                      <SelectTrigger className="w-full border-[#007A33] focus:ring-[#007A33]">
+                        <SelectValue placeholder="Selecione o mês" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 12 }).map((_, i) => (
+                          <SelectItem key={i} value={i.toString()}>
+                            {format(new Date(2000, i, 1), "MMMM")}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="rec-day-year" className="flex items-center gap-2 mb-1">
+                      Dia
+                    </Label>
+                    <Input
+                      id="rec-day-year"
+                      type="number"
+                      min="1"
+                      max="31"
+                      value={newRecDayOfYear || ""}
+                      onChange={(e) => setNewRecDayOfYear(Number.parseInt(e.target.value) || undefined)}
+                      placeholder="Ex: 1"
+                      required
+                      className="border-[#007A33] focus:ring-[#007A33]"
+                    />
+                  </div>
+                </div>
+              )}
 
-                    <div className="space-y-2">
-                      <Label htmlFor="balanceAmount">Valor (R$)</Label>
-                      <Input
-                        id="balanceAmount"
-                        type="number"
-                        step="0.01"
-                        placeholder="0,00"
-                        value={balanceForm.amount}
-                        onChange={(e) => setBalanceForm({ ...balanceForm, amount: e.target.value })}
-                        className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33] text-lg font-semibold text-center"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="balanceDescription">Descrição</Label>
-                      <Input
-                        id="balanceDescription"
-                        placeholder="Ex: Salário, Freelance, Transferência..."
-                        value={balanceForm.description}
-                        onChange={(e) => setBalanceForm({ ...balanceForm, description: e.target.value })}
-                        className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33]"
-                        required
-                      />
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button type="submit" className="flex-1 bg-[#007A33] hover:bg-[#005A26] text-white rounded-xl">
-                        Salvar
-                      </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="rec-start-date" className="flex items-center gap-2 mb-1">
+                    Data de Início
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
                       <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setShowBalanceForm(false)}
-                        className="flex-1 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl bg-transparent"
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Balance History */}
-            <Card className="border-2 border-emerald-200">
-              <CardHeader>
-                <CardTitle className="text-lg text-gray-800">Histórico Completo</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {personalExpenses.map((expense) => (
-                  <div key={expense.id} className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          expense.type === "income" ? "bg-green-500" : "bg-[#007A33]"
+                        variant={"outline"}
+                        className={`w-full justify-start text-left font-normal ${
+                          !newRecStartDate && "text-muted-foreground"
                         }`}
                       >
-                        {expense.type === "income" ? (
-                          <TrendingUp className="w-4 h-4 text-white" />
-                        ) : (
-                          getCategoryIcon(expense.category)
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-800 text-sm">{expense.description}</p>
-                        <p className="text-xs text-gray-600">
-                          {expense.date} • {expense.category}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p
-                        className={`font-bold text-lg ${expense.type === "income" ? "text-green-600" : "text-gray-800"}`}
-                      >
-                        {expense.type === "income" ? "+" : "-"}R$ {expense.amount.toFixed(2)}
-                      </p>
-                      <div className="flex gap-1 mt-1">
-                        <Button size="icon" variant="ghost" className="h-6 w-6 text-gray-600">
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-6 w-6 text-red-600">
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </>
-        )}
-
-        {activeTab === "recurring" && (
-          <>
-            {/* Add Recurring Button */}
-            <Card className="border-2 border-emerald-200">
-              <CardContent className="p-4">
-                <Button
-                  onClick={() => setShowRecurringForm(!showRecurringForm)}
-                  className="w-full bg-[#007A33] hover:bg-[#005A26] text-white rounded-xl p-4 h-auto flex items-center justify-center gap-2"
-                >
-                  <Repeat className="w-5 h-5" />
-                  <span>Nova Despesa Recorrente</span>
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Recurring Form */}
-            {showRecurringForm && (
-              <Card className="border-2 border-emerald-200">
-                <CardHeader>
-                  <CardTitle className="text-lg text-gray-800">Nova Despesa Recorrente</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleRecurringSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="recurringDescription">Descrição</Label>
-                      <Input
-                        id="recurringDescription"
-                        placeholder="Ex: Aluguel, Financiamento, Condomínio..."
-                        value={recurringForm.description}
-                        onChange={(e) => setRecurringForm({ ...recurringForm, description: e.target.value })}
-                        className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33]"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="recurringAmount">Valor (R$)</Label>
-                      <Input
-                        id="recurringAmount"
-                        type="number"
-                        step="0.01"
-                        placeholder="0,00"
-                        value={recurringForm.amount}
-                        onChange={(e) => setRecurringForm({ ...recurringForm, amount: e.target.value })}
-                        className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33] text-lg font-semibold text-center"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Categoria</Label>
-                      <Select
-                        value={recurringForm.category}
-                        onValueChange={(value) => setRecurringForm({ ...recurringForm, category: value })}
-                      >
-                        <SelectTrigger className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33]">
-                          <SelectValue placeholder="Selecione uma categoria" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Frequência</Label>
-                      <Select
-                        value={recurringForm.frequency}
-                        onValueChange={(value: any) => setRecurringForm({ ...recurringForm, frequency: value })}
-                      >
-                        <SelectTrigger className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="daily">Diário</SelectItem>
-                          <SelectItem value="weekly">Semanal</SelectItem>
-                          <SelectItem value="monthly">Mensal</SelectItem>
-                          <SelectItem value="yearly">Anual</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Conditional date fields based on frequency */}
-                    {recurringForm.frequency === "monthly" && (
-                      <div className="space-y-2">
-                        <Label>Dia do Mês</Label>
-                        <Select
-                          value={recurringForm.dayOfMonth}
-                          onValueChange={(value) => setRecurringForm({ ...recurringForm, dayOfMonth: value })}
-                        >
-                          <SelectTrigger className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                              <SelectItem key={day} value={day.toString()}>
-                                Dia {day}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-
-                    {recurringForm.frequency === "weekly" && (
-                      <div className="space-y-2">
-                        <Label>Dia da Semana</Label>
-                        <Select
-                          value={recurringForm.dayOfWeek}
-                          onValueChange={(value) => setRecurringForm({ ...recurringForm, dayOfWeek: value })}
-                        >
-                          <SelectTrigger className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">Segunda-feira</SelectItem>
-                            <SelectItem value="2">Terça-feira</SelectItem>
-                            <SelectItem value="3">Quarta-feira</SelectItem>
-                            <SelectItem value="4">Quinta-feira</SelectItem>
-                            <SelectItem value="5">Sexta-feira</SelectItem>
-                            <SelectItem value="6">Sábado</SelectItem>
-                            <SelectItem value="0">Domingo</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-
-                    {recurringForm.frequency === "yearly" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="recurringDayOfYear">Data Anual</Label>
-                        <Input
-                          id="recurringDayOfYear"
-                          type="date"
-                          value={recurringForm.dayOfYear}
-                          onChange={(e) => setRecurringForm({ ...recurringForm, dayOfYear: e.target.value })}
-                          className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33]"
-                        />
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="recurringStartDate">Data de Início</Label>
-                        <Input
-                          id="recurringStartDate"
-                          type="date"
-                          value={recurringForm.startDate}
-                          onChange={(e) => setRecurringForm({ ...recurringForm, startDate: e.target.value })}
-                          className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33]"
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="recurringEndDate">Data de Fim (opcional)</Label>
-                        <Input
-                          id="recurringEndDate"
-                          type="date"
-                          value={recurringForm.endDate}
-                          onChange={(e) => setRecurringForm({ ...recurringForm, endDate: e.target.value })}
-                          className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33]"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button type="submit" className="flex-1 bg-[#007A33] hover:bg-[#005A26] text-white rounded-xl">
-                        Salvar
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newRecStartDate ? format(newRecStartDate, "PPP") : <span>Selecione uma data</span>}
                       </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar mode="single" selected={newRecStartDate} onSelect={setNewRecStartDate} initialFocus />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div>
+                  <Label htmlFor="rec-end-date" className="flex items-center gap-2 mb-1">
+                    Data de Fim (Opcional)
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
                       <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setShowRecurringForm(false)}
-                        className="flex-1 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl bg-transparent"
+                        variant={"outline"}
+                        className={`w-full justify-start text-left font-normal ${
+                          !newRecEndDate && "text-muted-foreground"
+                        }`}
                       >
-                        Cancelar
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newRecEndDate ? format(newRecEndDate, "PPP") : <span>Selecione uma data</span>}
                       </Button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
-            )}
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar mode="single" selected={newRecEndDate} onSelect={setNewRecEndDate} initialFocus />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+              <Button type="submit" className="w-full bg-[#007A33] hover:bg-[#005F28] text-white">
+                Adicionar Recorrente
+              </Button>
+            </form>
 
-            {/* Recurring Expenses List */}
-            <Card className="border-2 border-emerald-200">
-              <CardHeader>
-                <CardTitle className="text-lg text-gray-800">Despesas Recorrentes</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {recurringExpenses.map((expense) => (
-                  <div key={expense.id} className="p-3 bg-emerald-50 rounded-xl">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3 flex-1">
-                        <div className="w-12 h-12 bg-[#007A33] rounded-full flex items-center justify-center flex-shrink-0">
-                          <Repeat className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-gray-800 text-sm">{expense.description}</h3>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                expense.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
-                              }`}
-                            >
-                              {expense.isActive ? "Ativo" : "Inativo"}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-600 mb-1">
-                            {expense.category} • {getFrequencyText(expense.frequency)}
+            <h3 className="text-xl font-semibold text-gray-700 mt-6 mb-4">Despesas Recorrentes Cadastradas</h3>
+            <div className="space-y-4">
+              {recurringExpenses.length === 0 ? (
+                <p className="text-center text-gray-500 py-4">Nenhuma despesa recorrente cadastrada.</p>
+              ) : (
+                recurringExpenses.map((rec) => {
+                  const nextOccurrence = rec.isActive ? getNextOccurrence(rec) : null
+                  return (
+                    <Card key={rec.id} className="p-4 border rounded-lg shadow-sm bg-white">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-800">{rec.description}</h4>
+                          <p className="text-sm text-gray-600">
+                            R$ {rec.amount.toFixed(2).replace(".", ",")} • {rec.frequency === "daily" && "Diário"}
+                            {rec.frequency === "weekly" &&
+                              `Semanal (Todo ${format(new Date(2000, 0, rec.dayOfWeek || 0), "EEEE")})`}
+                            {rec.frequency === "monthly" && `Mensal (Dia ${rec.dayOfMonth})`}
+                            {rec.frequency === "annually" && `Anual (${rec.dayOfYear}/${(rec.monthOfYear || 0) + 1})`}
                           </p>
-                          <p className="text-xs text-gray-500">Próximo vencimento: {expense.nextDate}</p>
+                          <p className="text-xs text-gray-500">
+                            Início: {format(rec.startDate, "dd/MM/yyyy")}
+                            {rec.endDate && ` • Fim: ${format(rec.endDate, "dd/MM/yyyy")}`}
+                          </p>
+                          {nextOccurrence && (
+                            <p className="text-sm text-gray-700 font-medium mt-1">
+                              Próximo Vencimento: {format(nextOccurrence, "dd/MM/yyyy")}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className={`text-sm font-medium ${rec.isActive ? "text-green-600" : "text-red-600"}`}>
+                            {rec.isActive ? "Ativo" : "Inativo"}
+                          </span>
+                          <Switch
+                            checked={rec.isActive}
+                            onCheckedChange={() => handleToggleRecurringStatus(rec.id)}
+                            className="data-[state=checked]:bg-[#007A33]"
+                          />
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleDeleteRecurring(rec.id)}
+                            className="text-red-500 border-red-500 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                      <div className="text-right flex-shrink-0 ml-3">
-                        <p className="font-bold text-gray-800 text-lg">R$ {expense.amount.toFixed(2)}</p>
-                        <div className="flex gap-1 mt-2">
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-600">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </>
-        )}
-      </div>
-    </div>
+                    </Card>
+                  )
+                })
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   )
 }

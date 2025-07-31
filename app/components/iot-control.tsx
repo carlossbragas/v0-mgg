@@ -3,354 +3,424 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
-import { useToast } from "@/components/ui/use-toast"
-import { Loader2 } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Lightbulb, List, MoreVertical, PlusCircle, Trash2, Edit, Thermometer, Speaker, HardDrive } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
+import { Switch } from "@/components/ui/switch"
+import { Plus, Edit, Trash2, Lightbulb, Thermometer, Speaker, Wifi, Home, Search } from "lucide-react"
 
-interface Dispositivo {
+interface Device {
   id: string
-  id_dispositivo: string
-  nome?: string
-  tipo?: string
-  comodo?: string
-  status?: boolean // true para ligado, false para desligado
-  versao?: string
+  id_dispositivo: string // Unique ID from the device itself (e.g., MAC address, custom ID)
+  name: string
+  type: "light" | "thermostat" | "speaker" | "other"
+  room: string
+  status: "on" | "off"
   ip?: string
   mac?: string
   wifi_rssi?: number
-  origem?: string
-  createdAt: string
-  updatedAt: string
+  version?: string
+  createdAt: string // ISO string
+  updatedAt?: string // ISO string
 }
 
-interface Log {
-  id: string
-  id_dispositivo: string
-  mensagem: string
-  timestamp: string
-  createdAt: string
-}
-
-export default function IoTControl() {
-  const { toast } = useToast()
-  const [devices, setDevices] = useState<Dispositivo[]>([])
-  const [loading, setLoading] = useState(true)
-  const [isAdding, setIsAdding] = useState(false)
+export default function IotControl() {
+  const [devices, setDevices] = useState<Device[]>([])
   const [newDeviceName, setNewDeviceName] = useState("")
-  const [newDeviceType, setNewDeviceType] = useState("")
+  const [newDeviceType, setNewDeviceType] = useState<"light" | "thermostat" | "speaker" | "other" | "">("")
   const [newDeviceRoom, setNewDeviceRoom] = useState("")
-  const [filterRoom, setFilterRoom] = useState("Todos")
-  const [filterType, setFilterType] = useState("Todos")
+  const [newDeviceId, setNewDeviceId] = useState("") // For id_dispositivo
+  const [filterRoom, setFilterRoom] = useState("all")
+  const [filterType, setFilterType] = useState("all")
+  const [searchTerm, setSearchTerm] = useState("")
 
-  const deviceTypes = ["Lâmpada", "Termostato", "Caixa de Som", "Outro"]
-  const rooms = ["Sala de Estar", "Quarto Principal", "Cozinha", "Banheiro", "Escritório", "Outro"]
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api" // Use env var for API URL
 
-  const fetchDevices = async () => {
-    setLoading(true)
-    try {
-      const res = await fetch("/api/dispositivos")
-      if (!res.ok) throw new Error("Falha ao buscar dispositivos")
-      const data = await res.json()
-      setDevices(
-        data.map((d: any) => ({
-          ...d,
-          status: Math.random() > 0.5, // Mock status for now, replace with actual IoT state
-        })),
-      )
-    } catch (error) {
-      console.error("Erro ao buscar dispositivos:", error)
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os dispositivos.",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
+  // Fetch devices from backend
   useEffect(() => {
+    const fetchDevices = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/dispositivos`)
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        const data: Device[] = await response.json()
+        setDevices(data)
+      } catch (error) {
+        console.error("Erro ao buscar dispositivos:", error)
+        // Fallback to mock data if API fails
+        setDevices([
+          {
+            id: "d1",
+            id_dispositivo: "ESP-LIGHT-001",
+            name: "Lâmpada Sala",
+            type: "light",
+            room: "Sala de Estar",
+            status: "on",
+            ip: "192.168.1.100",
+            mac: "AA:BB:CC:DD:EE:F1",
+            wifi_rssi: -50,
+            version: "1.0.0",
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: "d2",
+            id_dispositivo: "ESP-THERM-002",
+            name: "Termostato Quarto",
+            type: "thermostat",
+            room: "Quarto Principal",
+            status: "off",
+            ip: "192.168.1.101",
+            mac: "AA:BB:CC:DD:EE:F2",
+            wifi_rssi: -65,
+            version: "1.1.0",
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: "d3",
+            id_dispositivo: "ESP-SPEAKER-003",
+            name: "Caixa de Som Cozinha",
+            type: "speaker",
+            room: "Cozinha",
+            status: "on",
+            ip: "192.168.1.102",
+            mac: "AA:BB:CC:DD:EE:F3",
+            wifi_rssi: -40,
+            version: "1.0.1",
+            createdAt: new Date().toISOString(),
+          },
+        ])
+      }
+    }
     fetchDevices()
-  }, [])
+  }, [API_BASE_URL])
 
   const handleAddDevice = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsAdding(true)
+    if (!newDeviceName || !newDeviceType || !newDeviceRoom || !newDeviceId) {
+      alert("Todos os campos são obrigatórios para adicionar um dispositivo.")
+      return
+    }
+
+    const newDeviceData = {
+      id_dispositivo: newDeviceId,
+      name: newDeviceName,
+      type: newDeviceType,
+      room: newDeviceRoom,
+      status: "off", // Default status
+      version: "1.0.0", // Mock version
+      ip: "192.168.1.XXX", // Mock IP
+      mac: "XX:XX:XX:XX:XX:XX", // Mock MAC
+      wifi_rssi: -50, // Mock RSSI
+    }
+
     try {
-      const newDeviceId = `device-${Date.now()}` // Gerar um ID único para o mock
-      const res = await fetch("/api/dispositivos", {
+      const response = await fetch(`${API_BASE_URL}/dispositivos`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id_dispositivo: newDeviceId,
-          nome: newDeviceName,
-          tipo: newDeviceType,
-          comodo: newDeviceRoom,
-          origem: "minhagrana-app",
-          versao: "1.0",
-          ip: "192.168.1.100", // Mock IP
-          mac: "00:00:00:00:00:00", // Mock MAC
-          wifi_rssi: -50, // Mock RSSI
-        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newDeviceData),
       })
 
-      if (!res.ok) throw new Error("Falha ao adicionar dispositivo")
-      const data = await res.json()
-      setDevices((prev) => [...prev, { ...data.dispositivo, status: false }]) // Adiciona com status mockado
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || "Erro ao adicionar dispositivo.")
+      }
+
+      const result = await response.json()
+      setDevices((prev) => [
+        ...prev,
+        { ...newDeviceData, id: result.dispositivo.id, createdAt: result.dispositivo.createdAt } as Device,
+      ])
       setNewDeviceName("")
       setNewDeviceType("")
       setNewDeviceRoom("")
-      setIsAdding(false)
-      toast({
-        title: "Sucesso",
-        description: "Dispositivo adicionado com sucesso!",
-      })
-    } catch (error) {
+      setNewDeviceId("")
+      alert("Dispositivo adicionado com sucesso!")
+    } catch (error: any) {
       console.error("Erro ao adicionar dispositivo:", error)
-      toast({
-        title: "Erro",
-        description: "Não foi possível adicionar o dispositivo.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsAdding(false)
+      alert(`Erro ao adicionar dispositivo: ${error.message}`)
     }
   }
 
-  const handleToggleDevice = async (id_dispositivo: string, currentStatus: boolean) => {
-    // Para o protótipo, apenas atualizamos o estado localmente.
-    // Em um cenário real, você enviaria uma requisição para o dispositivo IoT.
-    setDevices((prev) => prev.map((d) => (d.id_dispositivo === id_dispositivo ? { ...d, status: !currentStatus } : d)))
-    toast({
-      title: "Status do Dispositivo",
-      description: `Dispositivo ${id_dispositivo} ${currentStatus ? "desligado" : "ligado"}. (Ação mockada)`,
-    })
+  const handleToggleStatus = async (id: string, currentStatus: "on" | "off") => {
+    const deviceToUpdate = devices.find((d) => d.id === id)
+    if (!deviceToUpdate) return
 
-    // Exemplo de como você enviaria um log para o backend
+    const newStatus = currentStatus === "on" ? "off" : "on"
+    const updatedDeviceData = { ...deviceToUpdate, status: newStatus }
+
     try {
-      await fetch("/api/logs", {
+      const response = await fetch(`${API_BASE_URL}/dispositivos`, {
+        // Using POST for update as per API spec
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id_dispositivo: id_dispositivo,
-          mensagem: `Dispositivo ${currentStatus ? "desligado" : "ligado"} via app.`,
-          timestamp: new Date().toISOString(),
-        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedDeviceData),
       })
-    } catch (error) {
-      console.error("Erro ao enviar log:", error)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || "Erro ao atualizar status do dispositivo.")
+      }
+
+      setDevices((prev) => prev.map((device) => (device.id === id ? { ...device, status: newStatus } : device)))
+      alert(`Dispositivo ${deviceToUpdate.name} ${newStatus === "on" ? "ligado" : "desligado"}!`)
+    } catch (error: any) {
+      console.error("Erro ao atualizar status:", error)
+      alert(`Erro ao atualizar status: ${error.message}`)
     }
+  }
+
+  const handleEditDevice = (id: string) => {
+    alert(`Editar dispositivo: ${id}`)
+    // Implement actual edit logic (e.g., open a dialog with pre-filled data)
   }
 
   const handleDeleteDevice = async (id: string, id_dispositivo: string) => {
-    // Em um cenário real, você teria uma rota DELETE /api/dispositivos/[id]
-    // Por enquanto, apenas remove do estado local
-    setDevices((prev) => prev.filter((d) => d.id !== id))
-    toast({
-      title: "Sucesso",
-      description: `Dispositivo ${id_dispositivo} removido. (Ação mockada)`,
-    })
+    if (confirm("Tem certeza que deseja remover este dispositivo?")) {
+      try {
+        // Assuming a DELETE endpoint for devices by id_dispositivo
+        const response = await fetch(`${API_BASE_URL}/dispositivos/${id_dispositivo}`, {
+          method: "DELETE",
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || "Erro ao excluir dispositivo.")
+        }
+
+        setDevices((prev) => prev.filter((device) => device.id !== id))
+        alert("Dispositivo removido!")
+      } catch (error: any) {
+        console.error("Erro ao excluir dispositivo:", error)
+        alert(`Erro ao excluir dispositivo: ${error.message}`)
+      }
+    }
   }
 
+  const getDeviceIcon = (type: string) => {
+    switch (type) {
+      case "light":
+        return <Lightbulb className="h-5 w-5" />
+      case "thermostat":
+        return <Thermometer className="h-5 w-5" />
+      case "speaker":
+        return <Speaker className="h-5 w-5" />
+      default:
+        return <Lightbulb className="h-5 w-5" />
+    }
+  }
+
+  const rooms = Array.from(new Set(devices.map((d) => d.room)))
+  const types = Array.from(new Set(devices.map((d) => d.type)))
+
   const filteredDevices = devices.filter((device) => {
-    const matchesRoom = filterRoom === "Todos" || device.comodo === filterRoom
-    const matchesType = filterType === "Todos" || device.tipo === filterType
-    return matchesRoom && matchesType
+    const matchesRoom = filterRoom === "all" || device.room === filterRoom
+    const matchesType = filterType === "all" || device.type === filterType
+    const matchesSearch =
+      searchTerm === "" ||
+      device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      device.room.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      device.id_dispositivo.toLowerCase().includes(searchTerm.toLowerCase())
+
+    return matchesRoom && matchesType && matchesSearch
   })
 
   return (
-    <div className="p-4 sm:p-6 md:p-8 bg-gradient-to-br from-[#e0f7fa] to-[#b2ebf2] min-h-screen font-retro">
-      <Card className="max-w-4xl mx-auto bg-white/90 backdrop-blur-sm shadow-lg rounded-xl p-4 sm:p-6">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-2xl sm:text-3xl font-bold text-[#007A33] flex items-center gap-2">
-            <Lightbulb className="w-7 h-7 sm:w-8 sm:h-8 text-cyan-600" />
-            Controle de Dispositivos IoT
-          </CardTitle>
-          <CardDescription className="text-gray-600 mt-1">
-            Gerencie seus dispositivos inteligentes conectados.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Formulário para Adicionar Dispositivo */}
-          <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4 space-y-4">
-            <h3 className="text-xl font-semibold text-cyan-800 flex items-center gap-2">
-              <PlusCircle className="w-5 h-5" /> Adicionar Novo Dispositivo
-            </h3>
-            <form onSubmit={handleAddDevice} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="deviceName">Nome do Dispositivo</Label>
-                <Input
-                  id="deviceName"
-                  placeholder="Ex: Lâmpada da Sala"
-                  value={newDeviceName}
-                  onChange={(e) => setNewDeviceName(e.target.value)}
-                  required
-                  className="rounded-md border-cyan-300 focus:border-cyan-500 focus:ring-cyan-500"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="deviceType">Tipo</Label>
-                <Select value={newDeviceType} onValueChange={setNewDeviceType} required>
-                  <SelectTrigger className="rounded-md border-cyan-300 focus:border-cyan-500 focus:ring-cyan-500">
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {deviceTypes.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="deviceRoom">Cômodo</Label>
-                <Select value={newDeviceRoom} onValueChange={setNewDeviceRoom} required>
-                  <SelectTrigger className="rounded-md border-cyan-300 focus:border-cyan-500 focus:ring-cyan-500">
-                    <SelectValue placeholder="Selecione o cômodo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {rooms.map((room) => (
-                      <SelectItem key={room} value={room}>
-                        {room}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                type="submit"
-                className="w-full sm:col-span-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-md font-semibold py-2 transition-colors duration-200"
-                disabled={isAdding}
-              >
-                {isAdding ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Adicionando...
-                  </>
-                ) : (
-                  "Adicionar Dispositivo"
-                )}
-              </Button>
-            </form>
+    <Card className="w-full bg-white text-[#007A33] rounded-lg shadow-lg">
+      <CardHeader className="text-center border-b pb-4">
+        <CardTitle className="text-2xl font-bold">Controle de Dispositivos IoT</CardTitle>
+      </CardHeader>
+      <CardContent className="p-6 space-y-6">
+        {/* Add New Device Form */}
+        <h3 className="text-xl font-semibold text-gray-700 mb-4">Adicionar Novo Dispositivo</h3>
+        <form onSubmit={handleAddDevice} className="space-y-4 p-4 border rounded-lg bg-cyan-50">
+          <div>
+            <Label htmlFor="device-id" className="flex items-center gap-2 mb-1">
+              ID do Dispositivo (ESP8266)
+            </Label>
+            <Input
+              id="device-id"
+              type="text"
+              placeholder="Ex: ESP-LIGHT-001"
+              value={newDeviceId}
+              onChange={(e) => setNewDeviceId(e.target.value)}
+              required
+              className="border-cyan-500 focus:ring-cyan-500"
+            />
           </div>
-
-          {/* Filtros */}
-          <div className="flex flex-col sm:flex-row gap-4 bg-cyan-50 border border-cyan-200 rounded-lg p-4">
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="filterRoom">Filtrar por Cômodo</Label>
-              <Select value={filterRoom} onValueChange={setFilterRoom}>
-                <SelectTrigger className="rounded-md border-cyan-300 focus:border-cyan-500 focus:ring-cyan-500">
-                  <SelectValue placeholder="Todos os cômodos" />
+          <div>
+            <Label htmlFor="device-name" className="flex items-center gap-2 mb-1">
+              Nome do Dispositivo
+            </Label>
+            <Input
+              id="device-name"
+              type="text"
+              placeholder="Ex: Lâmpada da Sala"
+              value={newDeviceName}
+              onChange={(e) => setNewDeviceName(e.target.value)}
+              required
+              className="border-cyan-500 focus:ring-cyan-500"
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="device-type" className="flex items-center gap-2 mb-1">
+                Tipo
+              </Label>
+              <Select value={newDeviceType} onValueChange={setNewDeviceType} required>
+                <SelectTrigger className="w-full border-cyan-500 focus:ring-cyan-500">
+                  <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Todos">Todos</SelectItem>
-                  {rooms.map((room) => (
-                    <SelectItem key={room} value={room}>
-                      {room}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="light">Lâmpada</SelectItem>
+                  <SelectItem value="thermostat">Termostato</SelectItem>
+                  <SelectItem value="speaker">Caixa de Som</SelectItem>
+                  <SelectItem value="other">Outro</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="filterType">Filtrar por Tipo</Label>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="rounded-md border-cyan-300 focus:border-cyan-500 focus:ring-cyan-500">
-                  <SelectValue placeholder="Todos os tipos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Todos">Todos</SelectItem>
-                  {deviceTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div>
+              <Label htmlFor="device-room" className="flex items-center gap-2 mb-1">
+                <Home className="h-4 w-4" /> Cômodo
+              </Label>
+              <Input
+                id="device-room"
+                type="text"
+                placeholder="Ex: Cozinha, Quarto"
+                value={newDeviceRoom}
+                onChange={(e) => setNewDeviceRoom(e.target.value)}
+                required
+                className="border-cyan-500 focus:ring-cyan-500"
+              />
             </div>
           </div>
+          <Button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-700 text-white">
+            <Plus className="h-5 w-5 mr-2" /> Adicionar Dispositivo
+          </Button>
+        </form>
 
-          {/* Lista de Dispositivos */}
-          <div className="space-y-4">
-            <h3 className="text-xl font-semibold text-cyan-800 flex items-center gap-2">
-              <List className="w-5 h-5" /> Meus Dispositivos
-            </h3>
-            {loading ? (
-              <div className="flex justify-center items-center h-32">
-                <Loader2 className="h-8 w-8 animate-spin text-cyan-600" />
-                <span className="ml-2 text-cyan-700">Carregando dispositivos...</span>
-              </div>
-            ) : filteredDevices.length === 0 ? (
-              <p className="text-center text-gray-500">Nenhum dispositivo encontrado.</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredDevices.map((device) => (
-                  <Card
-                    key={device.id}
-                    className="bg-white border border-cyan-200 rounded-lg shadow-sm p-4 flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      {device.tipo === "Lâmpada" && <Lightbulb className="w-6 h-6 text-yellow-500" />}
-                      {device.tipo === "Termostato" && <Thermometer className="w-6 h-6 text-red-500" />}
-                      {device.tipo === "Caixa de Som" && <Speaker className="w-6 h-6 text-blue-500" />}
-                      {device.tipo === "Outro" && <HardDrive className="w-6 h-6 text-gray-500" />}
-                      <div>
-                        <p className="font-semibold text-gray-800">{device.nome || "Dispositivo Sem Nome"}</p>
-                        <p className="text-sm text-gray-500">
-                          {device.comodo} - {device.tipo}
-                        </p>
-                        <Badge
-                          className={cn(
-                            "mt-1 text-xs",
-                            device.status ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700",
-                          )}
-                        >
-                          {device.status ? "Ligado" : "Desligado"}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={device.status}
-                        onCheckedChange={() => handleToggleDevice(device.id_dispositivo, device.status || false)}
-                        className="data-[state=checked]:bg-cyan-600 data-[state=unchecked]:bg-gray-300"
-                      />
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="rounded-full">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => alert("Funcionalidade de edição em desenvolvimento.")}>
-                            <Edit className="mr-2 h-4 w-4" /> Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteDevice(device.id, device.id_dispositivo)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" /> Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </Card>
+        {/* Device List */}
+        <h3 className="text-xl font-semibold text-gray-700 mt-6 mb-4">Dispositivos Conectados</h3>
+        {/* Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end mb-4">
+          <div>
+            <Label htmlFor="filter-room" className="flex items-center gap-2 mb-1">
+              <Home className="h-4 w-4" /> Filtrar por Cômodo
+            </Label>
+            <Select value={filterRoom} onValueChange={setFilterRoom}>
+              <SelectTrigger className="w-full border-cyan-500 focus:ring-cyan-500">
+                <SelectValue placeholder="Todos os cômodos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {rooms.map((room) => (
+                  <SelectItem key={room} value={room}>
+                    {room}
+                  </SelectItem>
                 ))}
-              </div>
-            )}
+              </SelectContent>
+            </Select>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          <div>
+            <Label htmlFor="filter-type" className="flex items-center gap-2 mb-1">
+              <Lightbulb className="h-4 w-4" /> Filtrar por Tipo
+            </Label>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-full border-cyan-500 focus:ring-cyan-500">
+                <SelectValue placeholder="Todos os tipos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {types.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="relative">
+            <Label htmlFor="search-device" className="flex items-center gap-2 mb-1">
+              <Search className="h-4 w-4" /> Buscar
+            </Label>
+            <Input
+              id="search-device"
+              type="text"
+              placeholder="Buscar por nome, ID, cômodo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full border-cyan-500 focus:ring-cyan-500 pl-10"
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {filteredDevices.length === 0 ? (
+            <p className="text-center text-gray-500 py-4">Nenhum dispositivo encontrado.</p>
+          ) : (
+            filteredDevices.map((device) => (
+              <Card
+                key={device.id}
+                className={`p-3 flex items-center justify-between shadow-sm ${
+                  device.status === "on"
+                    ? "bg-green-50 border-l-4 border-green-500"
+                    : "bg-red-50 border-l-4 border-red-500"
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  {getDeviceIcon(device.type)}
+                  <div>
+                    <p className="font-medium text-gray-800">{device.name}</p>
+                    <p className="text-sm text-gray-600">
+                      {device.room} • ID: {device.id_dispositivo}
+                    </p>
+                    <div className="flex items-center text-xs text-gray-500 gap-2">
+                      <span>
+                        <Wifi className="inline-block h-3 w-3 mr-1" />
+                        RSSI: {device.wifi_rssi} dBm
+                      </span>
+                      <span>Versão: {device.version}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm font-medium ${device.status === "on" ? "text-green-600" : "text-red-600"}`}>
+                    {device.status === "on" ? "Ligado" : "Desligado"}
+                  </span>
+                  <Switch
+                    checked={device.status === "on"}
+                    onCheckedChange={() => handleToggleStatus(device.id, device.status)}
+                    className="data-[state=checked]:bg-cyan-600"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleEditDevice(device.id)}
+                    className="text-blue-500 border-blue-500 hover:bg-blue-50"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleDeleteDevice(device.id, device.id_dispositivo)}
+                    className="text-red-500 border-red-500 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }

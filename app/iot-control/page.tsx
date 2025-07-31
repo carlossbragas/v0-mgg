@@ -1,5 +1,11 @@
-import IoTControl from "@/app/components/iot-control"
+"use client"
 
-export default function IoTControlPage() {
-  return <IoTControl />
+import IotControl from "../components/iot-control"
+
+export default function IotControlPage() {
+  return (
+    <div className="min-h-screen flex flex-col bg-gray-50 font-sans p-4">
+      <IotControl />
+    </div>
+  )
 }

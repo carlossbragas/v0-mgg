@@ -8,29 +8,33 @@ datasource db {
 }
 
 model Dispositivo {
-  id            String    @id @default(uuid())
-  id_dispositivo String    @unique // Identificador único do dispositivo (ex: ID do ESP8266)
-  versao        String?
-  nome          String?
-  sobrenome     String?
-  telefone      String?
-  email         String?
-  ip            String?
-  mac           String?
-  wifi_rssi     Int?
-  origem        String?   // Ex: "tseca"
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  logs          Log[]
+  id             String    @id @default(uuid())
+  id_dispositivo String    @unique // ID único do dispositivo (ex: MAC, ID customizado do firmware)
+  versao         String?
+  nome           String
+  sobrenome      String?
+  telefone       String?
+  email          String?
+  ip             String?
+  mac            String?
+  wifi_rssi      Int?
+  origem         String?   // Ex: "tseca", "minhagrana-app"
+  status         String?   @default("off") // "on", "off"
+  type           String?   @default("other") // "light", "thermostat", "speaker", "etc"
+  room           String?   // Cômodo onde o dispositivo está
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  logs           Log[]
 }
 
 model Log {
-  id            String    @id @default(uuid())
-  id_dispositivo String    // Chave estrangeira para Dispositivo
-  mensagem      String
-  timestamp     DateTime  // Timestamp gerado pelo dispositivo
-  createdAt     DateTime  @default(now())
-  dispositivo   Dispositivo @relation(fields: [id_dispositivo], references: [id_dispositivo])
+  id             String    @id @default(uuid())
+  id_dispositivo String
+  mensagem       String
+  timestamp      DateTime  // Timestamp do evento no dispositivo
+  createdAt      DateTime  @default(now()) // Timestamp de criação do log no banco de dados
+
+  dispositivo Dispositivo @relation(fields: [id_dispositivo], references: [id_dispositivo])
 
   @@index([id_dispositivo])
 }

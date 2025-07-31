@@ -5,86 +5,118 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Search, Edit, Trash2, Utensils, Car, Plus } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { format } from "date-fns"
+import { ArrowLeft, Search, Edit, Trash2, Filter } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { User, Tag } from "lucide-react"
 
 interface ExpensesListProps {
-  onBack: () => void
+  familyMembers: { id: string; name: string; email: string; role: string }[]
 }
 
-export default function ExpensesList({ onBack }: ExpensesListProps) {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterCategory, setFilterCategory] = useState("all")
-  const [filterMember, setFilterMember] = useState("all")
+interface Expense {
+  id: string
+  value: number
+  date: Date
+  category: string
+  payer: string
+  notes?: string
+  splitType: "equal" | "percentage" | "value"
+  splitDetails: { memberId: string; amount: number; percentage?: number }[]
+}
 
-  // Mock data
-  const expenses = [
+export default function ExpensesList({ familyMembers }: ExpensesListProps) {
+  const [filterMember, setFilterMember] = useState("all")
+  const [filterCategory, setFilterCategory] = useState("all")
+  const [filterPeriod, setFilterPeriod] = useState("all")
+  const [searchTerm, setSearchTerm] = useState("")
+
+  // Mock Data
+  const mockExpenses: Expense[] = [
     {
-      id: 1,
-      description: "Supermercado Extra",
-      amount: 156.8,
+      id: "exp1",
+      value: 150.0,
+      date: new Date("2025-07-28"),
       category: "Alimentação",
-      member: "Maria Silva",
-      date: "2024-01-15",
-      notes: "Compras da semana",
+      payer: "user1",
+      notes: "Jantar fora com a família",
+      splitType: "equal",
+      splitDetails: [
+        { memberId: "user1", amount: 50.0 },
+        { memberId: "user2", amount: 50.0 },
+        { memberId: "user3", amount: 50.0 },
+      ],
     },
     {
-      id: 2,
-      description: "Gasolina Posto Shell",
-      amount: 89.5,
+      id: "exp2",
+      value: 80.5,
+      date: new Date("2025-07-25"),
       category: "Transporte",
-      member: "João Silva",
-      date: "2024-01-14",
-      notes: "",
+      payer: "user2",
+      notes: "Gasolina do carro",
+      splitType: "value",
+      splitDetails: [
+        { memberId: "user2", amount: 40.5 },
+        { memberId: "user1", amount: 40.0 },
+      ],
     },
     {
-      id: 3,
-      description: "Farmácia Drogasil",
-      amount: 45.2,
-      category: "Saúde",
-      member: "Ana Silva",
-      date: "2024-01-13",
-      notes: "Remédios",
+      id: "exp3",
+      value: 300.0,
+      date: new Date("2025-07-20"),
+      category: "Moradia",
+      payer: "user1",
+      notes: "Conta de luz",
+      splitType: "percentage",
+      splitDetails: [
+        { memberId: "user1", amount: 150.0, percentage: 50 },
+        { memberId: "user2", amount: 90.0, percentage: 30 },
+        { memberId: "user3", amount: 60.0, percentage: 20 },
+      ],
     },
     {
-      id: 4,
-      description: "Netflix",
-      amount: 32.9,
+      id: "exp4",
+      value: 50.0,
+      date: new Date("2025-07-18"),
       category: "Lazer",
-      member: "Pedro Silva",
-      date: "2024-01-12",
-      notes: "Assinatura mensal",
-    },
-    {
-      id: 5,
-      description: "Padaria",
-      amount: 18.5,
-      category: "Alimentação",
-      member: "Maria Silva",
-      date: "2024-01-11",
-      notes: "Pães e leite",
+      payer: "user3",
+      notes: "Cinema",
+      splitType: "equal",
+      splitDetails: [{ memberId: "user3", amount: 50.0 }],
     },
   ]
 
-  const categories = ["all", "Alimentação", "Transporte", "Saúde", "Lazer", "Casa", "Outros"]
-  const members = ["all", "João Silva", "Maria Silva", "Pedro Silva", "Ana Silva"]
+  const getMemberName = (id: string) => {
+    return familyMembers.find((m) => m.id === id)?.name || "Desconhecido"
+  }
 
-  const filteredExpenses = expenses.filter((expense) => {
-    const matchesSearch = expense.description.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredExpenses = mockExpenses.filter((expense) => {
+    const matchesMember = filterMember === "all" || expense.splitDetails.some((d) => d.memberId === filterMember)
     const matchesCategory = filterCategory === "all" || expense.category === filterCategory
-    const matchesMember = filterMember === "all" || expense.member === filterMember
-    return matchesSearch && matchesCategory && matchesMember
+    const matchesSearch =
+      searchTerm === "" ||
+      expense.notes?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      expense.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getMemberName(expense.payer).toLowerCase().includes(searchTerm.toLowerCase())
+
+    // Simple period filter (e.g., current month)
+    const expenseMonth = expense.date.getMonth()
+    const currentMonth = new Date().getMonth()
+    const matchesPeriod = filterPeriod === "all" || (filterPeriod === "this-month" && expenseMonth === currentMonth)
+
+    return matchesMember && matchesCategory && matchesPeriod && matchesSearch
   })
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "Alimentação":
-        return <Utensils className="w-5 h-5 text-white" />
-      case "Transporte":
-        return <Car className="w-5 h-5 text-white" />
-      case "Saúde":
-        return <Plus className="w-5 h-5 text-white" />
-      default:
-        return <div className="w-5 h-5 bg-white rounded-full" />
+  const handleEdit = (expenseId: string) => {
+    alert(`Editar despesa: ${expenseId}`)
+    // Implement navigation to expense form with pre-filled data
+  }
+
+  const handleDelete = (expenseId: string) => {
+    if (confirm(`Tem certeza que deseja excluir a despesa ${expenseId}?`)) {
+      alert(`Despesa ${expenseId} excluída! (Mock)`)
+      // Implement actual deletion logic
     }
   }
 
@@ -92,7 +124,12 @@ export default function ExpensesList({ onBack }: ExpensesListProps) {
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
       <div className="bg-[#007A33] text-white p-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-emerald-700">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => window.history.back()}
+            className="text-white hover:bg-emerald-700"
+          >
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-xl font-bold">Despesas</h1>
@@ -100,104 +137,138 @@ export default function ExpensesList({ onBack }: ExpensesListProps) {
       </div>
 
       <div className="p-4 space-y-4">
-        {/* Search and Filters */}
+        {/* Filters */}
         <Card className="border-2 border-emerald-200">
           <CardContent className="p-4 space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Buscar despesas..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 rounded-xl border-2 border-emerald-200 focus:border-[#007A33]"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <Select value={filterCategory} onValueChange={setFilterCategory}>
-                <SelectTrigger className="rounded-xl border-2 border-emerald-200">
-                  <SelectValue placeholder="Categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category === "all" ? "Todas as categorias" : category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={filterMember} onValueChange={setFilterMember}>
-                <SelectTrigger className="rounded-xl border-2 border-emerald-200">
-                  <SelectValue placeholder="Membro" />
-                </SelectTrigger>
-                <SelectContent>
-                  {members.map((member) => (
-                    <SelectItem key={member} value={member}>
-                      {member === "all" ? "Todos os membros" : member}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div>
+                <Label htmlFor="filter-member" className="flex items-center gap-2 mb-1">
+                  <User className="h-4 w-4" /> Membro
+                </Label>
+                <Select value={filterMember} onValueChange={setFilterMember}>
+                  <SelectTrigger className="w-full border-[#007A33] focus:ring-[#007A33]">
+                    <SelectValue placeholder="Todos os membros" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {familyMembers.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="filter-category" className="flex items-center gap-2 mb-1">
+                  <Tag className="h-4 w-4" /> Categoria
+                </Label>
+                <Select value={filterCategory} onValueChange={setFilterCategory}>
+                  <SelectTrigger className="w-full border-[#007A33] focus:ring-[#007A33]">
+                    <SelectValue placeholder="Todas as categorias" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    <SelectItem value="Alimentação">Alimentação</SelectItem>
+                    <SelectItem value="Moradia">Moradia</SelectItem>
+                    <SelectItem value="Transporte">Transporte</SelectItem>
+                    <SelectItem value="Saúde">Saúde</SelectItem>
+                    <SelectItem value="Educação">Educação</SelectItem>
+                    <SelectItem value="Lazer">Lazer</SelectItem>
+                    <SelectItem value="Contas">Contas</SelectItem>
+                    <SelectItem value="Outros">Outros</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="filter-period" className="flex items-center gap-2 mb-1">
+                  <Filter className="h-4 w-4" /> Período
+                </Label>
+                <Select value={filterPeriod} onValueChange={setFilterPeriod}>
+                  <SelectTrigger className="w-full border-[#007A33] focus:ring-[#007A33]">
+                    <SelectValue placeholder="Todo o período" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todo o período</SelectItem>
+                    <SelectItem value="this-month">Este mês</SelectItem>
+                    {/* Add more period options as needed */}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="relative">
+                <Label htmlFor="search-term" className="flex items-center gap-2 mb-1">
+                  <Search className="h-4 w-4" /> Buscar
+                </Label>
+                <Input
+                  id="search-term"
+                  type="text"
+                  placeholder="Buscar por descrição, categoria..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full border-[#007A33] focus:ring-[#007A33] pl-10"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Expenses List */}
-        <div className="space-y-3">
-          {filteredExpenses.map((expense) => (
-            <Card key={expense.id} className="border-2 border-emerald-200">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3 flex-1">
-                    <div className="w-12 h-12 bg-[#007A33] rounded-full flex items-center justify-center flex-shrink-0">
-                      {getCategoryIcon(expense.category)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-800 text-sm">{expense.description}</h3>
-                      <p className="text-xs text-gray-600 mt-1">{expense.member}</p>
-                      <p className="text-xs text-gray-500">
-                        {expense.date} • {expense.category}
-                      </p>
-                      {expense.notes && <p className="text-xs text-gray-600 mt-1 italic">{expense.notes}</p>}
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0 ml-3">
-                    <p className="font-bold text-gray-800 text-lg">R$ {expense.amount.toFixed(2)}</p>
-                    <div className="flex gap-1 mt-2">
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-600">
-                        <Edit className="w-4 h-4" />
+        {/* Expenses List Table */}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-100">
+                <TableHead className="text-[#007A33]">Data</TableHead>
+                <TableHead className="text-[#007A33]">Valor</TableHead>
+                <TableHead className="text-[#007A33]">Categoria</TableHead>
+                <TableHead className="text-[#007A33]">Pago por</TableHead>
+                <TableHead className="text-[#007A33]">Dividido com</TableHead>
+                <TableHead className="text-[#007A33]">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredExpenses.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-gray-500 py-4">
+                    Nenhuma despesa encontrada com os filtros aplicados.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredExpenses.map((expense) => (
+                  <TableRow key={expense.id}>
+                    <TableCell>{format(expense.date, "dd/MM/yyyy")}</TableCell>
+                    <TableCell className="font-semibold text-red-600">
+                      R$ {expense.value.toFixed(2).replace(".", ",")}
+                    </TableCell>
+                    <TableCell>{expense.category}</TableCell>
+                    <TableCell>{getMemberName(expense.payer)}</TableCell>
+                    <TableCell>
+                      {expense.splitDetails.map((detail) => getMemberName(detail.memberId)).join(", ")}
+                    </TableCell>
+                    <TableCell className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleEdit(expense.id)}
+                        className="text-blue-500 border-blue-500 hover:bg-blue-50"
+                      >
+                        <Edit className="h-4 w-4" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600">
-                        <Trash2 className="w-4 h-4" />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleDelete(expense.id)}
+                        className="text-red-500 border-red-500 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
-
-        {filteredExpenses.length === 0 && (
-          <Card className="border-2 border-emerald-200">
-            <CardContent className="p-8 text-center">
-              <p className="text-gray-600">Nenhuma despesa encontrada</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Summary */}
-        <Card className="border-2 border-emerald-200 bg-emerald-50">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center">
-              <span className="font-semibold text-gray-800">Total das despesas:</span>
-              <span className="font-bold text-xl text-[#007A33]">
-                R$ {filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0).toFixed(2)}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   )

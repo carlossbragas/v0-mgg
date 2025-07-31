@@ -1,447 +1,334 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, Plus, CheckSquare, Square, Edit, Trash2, User, Calendar, AlertCircle } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { format, isPast } from "date-fns"
+import { Plus, Edit, Trash2, CalendarIcon, User, Tag, Flag } from "lucide-react"
 
-interface TasksListProps {
-  onBack: () => void
+interface Task {
+  id: string
+  title: string
+  description?: string
+  assignedTo: string // member ID
+  dueDate: Date
+  priority: "high" | "medium" | "low"
+  category: string
+  isCompleted: boolean
 }
 
-export default function TasksList({ onBack }: TasksListProps) {
-  const [showTaskForm, setShowTaskForm] = useState(false)
-  const [filter, setFilter] = useState<"all" | "pending" | "completed" | "overdue">("all")
+interface TasksListProps {
+  familyMembers: { id: string; name: string; email: string; role: string }[]
+}
 
-  const [taskForm, setTaskForm] = useState({
-    title: "",
-    description: "",
-    assignedTo: "",
-    dueDate: "",
-    priority: "medium" as "low" | "medium" | "high",
-    category: "",
-  })
-
-  // Mock data
-  const members = ["João Silva", "Maria Silva", "Pedro Silva", "Ana Silva"]
-  const categories = ["Casa", "Financeiro", "Saúde", "Educação", "Compras", "Outros"]
-
-  const tasks = [
+export default function TasksList({ familyMembers }: TasksListProps) {
+  const [tasks, setTasks] = useState<Task[]>([
     {
-      id: 1,
+      id: "t1",
       title: "Pagar conta de luz",
-      description: "Vencimento dia 20/01",
-      assignedTo: "João Silva",
-      dueDate: "2024-01-20",
-      priority: "high" as const,
+      description: "Vencimento dia 10",
+      assignedTo: "user1",
+      dueDate: new Date("2025-08-10"),
+      priority: "high",
       category: "Financeiro",
-      completed: false,
-      createdAt: "2024-01-15",
-      completedAt: null,
+      isCompleted: false,
     },
     {
-      id: 2,
-      title: "Comprar remédio da Ana",
-      description: "Remédio para pressão",
-      assignedTo: "Maria Silva",
-      dueDate: "2024-01-18",
-      priority: "high" as const,
-      category: "Saúde",
-      completed: false,
-      createdAt: "2024-01-14",
-      completedAt: null,
-    },
-    {
-      id: 3,
-      title: "Limpar a garagem",
-      description: "Organizar ferramentas e limpar",
-      assignedTo: "Pedro Silva",
-      dueDate: "2024-01-25",
-      priority: "medium" as const,
-      category: "Casa",
-      completed: false,
-      createdAt: "2024-01-13",
-      completedAt: null,
-    },
-    {
-      id: 4,
-      title: "Renovar seguro do carro",
-      description: "Pesquisar preços e renovar",
-      assignedTo: "João Silva",
-      dueDate: "2024-01-30",
-      priority: "medium" as const,
-      category: "Financeiro",
-      completed: true,
-      createdAt: "2024-01-10",
-      completedAt: "2024-01-16",
-    },
-    {
-      id: 5,
-      title: "Comprar material escolar",
-      description: "Lista da escola do Pedro",
-      assignedTo: "Ana Silva",
-      dueDate: "2024-01-12",
-      priority: "low" as const,
-      category: "Educação",
-      completed: false,
-      createdAt: "2024-01-08",
-      completedAt: null,
-    },
-  ]
-
-  const handleTaskSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Mock save task
-    console.log("New task:", taskForm)
-    setTaskForm({
-      title: "",
-      description: "",
-      assignedTo: "",
-      dueDate: "",
+      id: "t2",
+      title: "Comprar presente da vovó",
+      description: "Aniversário dia 15",
+      assignedTo: "user2",
+      dueDate: new Date("2025-08-15"),
       priority: "medium",
-      category: "",
-    })
-    setShowTaskForm(false)
+      category: "Pessoal",
+      isCompleted: false,
+    },
+    {
+      id: "t3",
+      title: "Limpar a garagem",
+      assignedTo: "user3",
+      dueDate: new Date("2025-07-20"),
+      priority: "low",
+      category: "Casa",
+      isCompleted: true,
+    },
+  ])
+
+  const [newTaskTitle, setNewTaskTitle] = useState("")
+  const [newTaskDescription, setNewTaskDescription] = useState("")
+  const [newTaskAssignedTo, setNewTaskAssignedTo] = useState("")
+  const [newTaskDueDate, setNewTaskDueDate] = useState<Date | undefined>(new Date())
+  const [newTaskPriority, setNewTaskPriority] = useState<"high" | "medium" | "low">("medium")
+  const [newTaskCategory, setNewTaskCategory] = useState("")
+
+  const categories = ["Casa", "Financeiro", "Saúde", "Educação", "Trabalho", "Pessoal", "Outros"]
+
+  const handleAddTask = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newTaskTitle || !newTaskAssignedTo || !newTaskDueDate || !newTaskCategory) {
+      alert("Título, responsável, data limite e categoria são obrigatórios para a tarefa.")
+      return
+    }
+
+    const newTask: Task = {
+      id: `t${tasks.length + 1}`,
+      title: newTaskTitle,
+      description: newTaskDescription,
+      assignedTo: newTaskAssignedTo,
+      dueDate: newTaskDueDate,
+      priority: newTaskPriority,
+      category: newTaskCategory,
+      isCompleted: false,
+    }
+    setTasks((prev) => [...prev, newTask])
+    setNewTaskTitle("")
+    setNewTaskDescription("")
+    setNewTaskAssignedTo("")
+    setNewTaskDueDate(new Date())
+    setNewTaskPriority("medium")
+    setNewTaskCategory("")
+    alert("Tarefa adicionada com sucesso!")
   }
 
-  const toggleTaskComplete = (taskId: number) => {
-    // Mock toggle completion
-    console.log("Toggle task completion:", taskId)
+  const handleToggleComplete = (id: string, isChecked: boolean) => {
+    setTasks((prev) => prev.map((task) => (task.id === id ? { ...task, isCompleted: isChecked } : task)))
   }
 
-  const isOverdue = (dueDate: string, completed: boolean) => {
-    if (completed) return false
-    return new Date(dueDate) < new Date()
+  const handleEditTask = (id: string) => {
+    alert(`Editar tarefa: ${id}`)
+    // Implement actual edit logic (e.g., open a dialog with pre-filled data)
   }
 
-  const getPriorityColor = (priority: string) => {
+  const handleDeleteTask = (id: string) => {
+    if (confirm("Tem certeza que deseja excluir esta tarefa?")) {
+      setTasks((prev) => prev.filter((task) => task.id !== id))
+      alert("Tarefa excluída!")
+    }
+  }
+
+  const getMemberName = (id: string) => {
+    return familyMembers.find((m) => m.id === id)?.name || "Desconhecido"
+  }
+
+  const getPriorityColor = (priority: "high" | "medium" | "low") => {
     switch (priority) {
       case "high":
-        return "text-red-600 bg-red-100"
+        return "text-red-600"
       case "medium":
-        return "text-yellow-600 bg-yellow-100"
+        return "text-yellow-600"
       case "low":
-        return "text-green-600 bg-green-100"
+        return "text-green-600"
       default:
-        return "text-gray-600 bg-gray-100"
+        return "text-gray-600"
     }
   }
 
-  const getPriorityText = (priority: string) => {
+  const getPriorityBadgeColor = (priority: "high" | "medium" | "low") => {
     switch (priority) {
       case "high":
-        return "Alta"
+        return "bg-red-100 text-red-800"
       case "medium":
-        return "Média"
+        return "bg-yellow-100 text-yellow-800"
       case "low":
-        return "Baixa"
+        return "bg-green-100 text-green-800"
       default:
-        return priority
+        return "bg-gray-100 text-gray-800"
     }
   }
-
-  const filteredTasks = tasks.filter((task) => {
-    switch (filter) {
-      case "pending":
-        return !task.completed
-      case "completed":
-        return task.completed
-      case "overdue":
-        return isOverdue(task.dueDate, task.completed)
-      default:
-        return true
-    }
-  })
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
-      <div className="bg-purple-600 text-white p-4">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-purple-700">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+    <Card className="w-full bg-white text-[#007A33] rounded-lg shadow-lg">
+      <CardHeader className="text-center border-b pb-4">
+        <CardTitle className="text-2xl font-bold">Lista de Tarefas</CardTitle>
+      </CardHeader>
+      <CardContent className="p-6 space-y-6">
+        {/* Add New Task Form */}
+        <h3 className="text-xl font-semibold text-gray-700 mb-4">Adicionar Nova Tarefa</h3>
+        <form onSubmit={handleAddTask} className="space-y-4 p-4 border rounded-lg bg-purple-50">
           <div>
-            <h1 className="text-xl font-bold">Lista de Tarefas</h1>
-            <p className="text-purple-100 text-sm">Organize as atividades da família</p>
+            <Label htmlFor="task-title" className="flex items-center gap-2 mb-1">
+              Título da Tarefa
+            </Label>
+            <Input
+              id="task-title"
+              type="text"
+              placeholder="Ex: Pagar conta de luz"
+              value={newTaskTitle}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
+              required
+              className="border-purple-500 focus:ring-purple-500"
+            />
           </div>
-        </div>
-      </div>
-
-      <div className="p-4 space-y-4">
-        {/* Add Task Button */}
-        <Card className="border-2 border-purple-200">
-          <CardContent className="p-4">
-            <Button
-              onClick={() => setShowTaskForm(!showTaskForm)}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-xl p-4 h-auto flex items-center justify-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Nova Tarefa</span>
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Task Form */}
-        {showTaskForm && (
-          <Card className="border-2 border-purple-200">
-            <CardHeader>
-              <CardTitle className="text-lg text-gray-800">Nova Tarefa</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleTaskSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="taskTitle">Título da Tarefa</Label>
-                  <Input
-                    id="taskTitle"
-                    placeholder="Ex: Pagar conta de luz"
-                    value={taskForm.title}
-                    onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
-                    className="rounded-xl border-2 border-purple-200 focus:border-purple-600"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="taskDescription">Descrição (opcional)</Label>
-                  <Textarea
-                    id="taskDescription"
-                    placeholder="Detalhes da tarefa..."
-                    value={taskForm.description}
-                    onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
-                    className="rounded-xl border-2 border-purple-200 focus:border-purple-600 min-h-[80px]"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>Responsável</Label>
-                    <Select
-                      value={taskForm.assignedTo}
-                      onValueChange={(value) => setTaskForm({ ...taskForm, assignedTo: value })}
-                    >
-                      <SelectTrigger className="rounded-xl border-2 border-purple-200 focus:border-purple-600">
-                        <SelectValue placeholder="Selecionar" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {members.map((member) => (
-                          <SelectItem key={member} value={member}>
-                            {member}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="taskDueDate">Data Limite</Label>
-                    <Input
-                      id="taskDueDate"
-                      type="date"
-                      value={taskForm.dueDate}
-                      onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })}
-                      className="rounded-xl border-2 border-purple-200 focus:border-purple-600"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>Prioridade</Label>
-                    <Select
-                      value={taskForm.priority}
-                      onValueChange={(value: any) => setTaskForm({ ...taskForm, priority: value })}
-                    >
-                      <SelectTrigger className="rounded-xl border-2 border-purple-200 focus:border-purple-600">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Baixa</SelectItem>
-                        <SelectItem value="medium">Média</SelectItem>
-                        <SelectItem value="high">Alta</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Categoria</Label>
-                    <Select
-                      value={taskForm.category}
-                      onValueChange={(value) => setTaskForm({ ...taskForm, category: value })}
-                    >
-                      <SelectTrigger className="rounded-xl border-2 border-purple-200 focus:border-purple-600">
-                        <SelectValue placeholder="Selecionar" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button type="submit" className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-xl">
-                    Salvar Tarefa
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowTaskForm(false)}
-                    className="flex-1 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl bg-transparent"
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Filter Buttons */}
-        <Card className="border-2 border-purple-200">
-          <CardContent className="p-4">
-            <div className="grid grid-cols-4 gap-2">
-              <Button
-                onClick={() => setFilter("all")}
-                variant={filter === "all" ? "default" : "outline"}
-                className={`rounded-xl text-xs ${
-                  filter === "all"
-                    ? "bg-purple-600 text-white"
-                    : "border-2 border-purple-200 text-purple-600 hover:bg-purple-50 bg-transparent"
-                }`}
-              >
-                Todas
-              </Button>
-              <Button
-                onClick={() => setFilter("pending")}
-                variant={filter === "pending" ? "default" : "outline"}
-                className={`rounded-xl text-xs ${
-                  filter === "pending"
-                    ? "bg-purple-600 text-white"
-                    : "border-2 border-purple-200 text-purple-600 hover:bg-purple-50 bg-transparent"
-                }`}
-              >
-                Pendentes
-              </Button>
-              <Button
-                onClick={() => setFilter("completed")}
-                variant={filter === "completed" ? "default" : "outline"}
-                className={`rounded-xl text-xs ${
-                  filter === "completed"
-                    ? "bg-purple-600 text-white"
-                    : "border-2 border-purple-200 text-purple-600 hover:bg-purple-50 bg-transparent"
-                }`}
-              >
-                Concluídas
-              </Button>
-              <Button
-                onClick={() => setFilter("overdue")}
-                variant={filter === "overdue" ? "default" : "outline"}
-                className={`rounded-xl text-xs ${
-                  filter === "overdue"
-                    ? "bg-red-600 text-white"
-                    : "border-2 border-red-200 text-red-600 hover:bg-red-50 bg-transparent"
-                }`}
-              >
-                Atrasadas
-              </Button>
+          <div>
+            <Label htmlFor="task-description" className="mb-1">
+              Descrição
+            </Label>
+            <Input
+              id="task-description"
+              type="text"
+              placeholder="Detalhes da tarefa..."
+              value={newTaskDescription}
+              onChange={(e) => setNewTaskDescription(e.target.value)}
+              className="border-purple-500 focus:ring-purple-500"
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="task-assigned-to" className="flex items-center gap-2 mb-1">
+                <User className="h-4 w-4" /> Responsável
+              </Label>
+              <Select value={newTaskAssignedTo} onValueChange={setNewTaskAssignedTo} required>
+                <SelectTrigger className="w-full border-purple-500 focus:ring-purple-500">
+                  <SelectValue placeholder="Selecione um membro" />
+                </SelectTrigger>
+                <SelectContent>
+                  {familyMembers.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <Label htmlFor="task-due-date" className="flex items-center gap-2 mb-1">
+                <CalendarIcon className="h-4 w-4" /> Data Limite
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={`w-full justify-start text-left font-normal ${
+                      !newTaskDueDate && "text-muted-foreground"
+                    }`}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {newTaskDueDate ? format(newTaskDueDate, "PPP") : <span>Selecione uma data</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar mode="single" selected={newTaskDueDate} onSelect={setNewTaskDueDate} initialFocus />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="task-priority" className="flex items-center gap-2 mb-1">
+                <Flag className="h-4 w-4" /> Prioridade
+              </Label>
+              <Select value={newTaskPriority} onValueChange={setNewTaskPriority}>
+                <SelectTrigger className="w-full border-purple-500 focus:ring-purple-500">
+                  <SelectValue placeholder="Selecione a prioridade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="high">Alta</SelectItem>
+                  <SelectItem value="medium">Média</SelectItem>
+                  <SelectItem value="low">Baixa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="task-category" className="flex items-center gap-2 mb-1">
+                <Tag className="h-4 w-4" /> Categoria
+              </Label>
+              <Select value={newTaskCategory} onValueChange={setNewTaskCategory} required>
+                <SelectTrigger className="w-full border-purple-500 focus:ring-purple-500">
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white">
+            <Plus className="h-5 w-5 mr-2" /> Adicionar Tarefa
+          </Button>
+        </form>
 
         {/* Tasks List */}
+        <h3 className="text-xl font-semibold text-gray-700 mt-6 mb-4">Tarefas da Família</h3>
         <div className="space-y-3">
-          {filteredTasks.map((task) => (
-            <Card key={task.id} className="border-2 border-purple-200">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => toggleTaskComplete(task.id)}
-                    className="mt-1 flex-shrink-0"
-                  >
-                    {task.completed ? (
-                      <CheckSquare className="w-5 h-5 text-green-600" />
-                    ) : (
-                      <Square className="w-5 h-5 text-gray-400" />
-                    )}
-                  </Button>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3
-                        className={`font-semibold text-gray-800 ${task.completed ? "line-through text-gray-500" : ""}`}
+          {tasks.length === 0 ? (
+            <p className="text-center text-gray-500 py-4">Nenhuma tarefa cadastrada.</p>
+          ) : (
+            tasks
+              .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime()) // Sort by due date
+              .map((task) => (
+                <Card
+                  key={task.id}
+                  className={`p-3 flex items-center justify-between shadow-sm ${
+                    task.isCompleted
+                      ? "bg-green-50 border-l-4 border-green-500"
+                      : isPast(task.dueDate) && !task.isCompleted
+                        ? "bg-red-50 border-l-4 border-red-500"
+                        : "bg-white border-l-4 border-purple-500"
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id={`task-${task.id}`}
+                      checked={task.isCompleted}
+                      onCheckedChange={(checked) => handleToggleComplete(task.id, checked as boolean)}
+                      className="data-[state=checked]:bg-purple-600 data-[state=checked]:text-white"
+                    />
+                    <div>
+                      <p
+                        className={`font-medium text-gray-800 ${task.isCompleted ? "line-through text-gray-500" : ""}`}
                       >
                         {task.title}
-                      </h3>
-                      <div className="flex gap-1 ml-2">
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-600">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {task.description && (
-                      <p className={`text-sm text-gray-600 mb-2 ${task.completed ? "line-through" : ""}`}>
-                        {task.description}
                       </p>
-                    )}
-
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                        {getPriorityText(task.priority)}
-                      </span>
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                        {task.category}
-                      </span>
-                      {isOverdue(task.dueDate, task.completed) && (
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
-                          Atrasada
+                      {task.description && <p className="text-sm text-gray-600">{task.description}</p>}
+                      <p className="text-xs text-gray-500">Responsável: {getMemberName(task.assignedTo)}</p>
+                      <p className="text-xs text-gray-500">
+                        Data Limite: {format(task.dueDate, "dd/MM/yyyy")}
+                        {isPast(task.dueDate) && !task.isCompleted && (
+                          <span className="ml-1 text-red-600 font-semibold">(Atrasada)</span>
+                        )}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-xs font-semibold ${getPriorityColor(task.priority)}`}>
+                          Prioridade: {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                         </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <div className="flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        <span>{task.assignedTo}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        <span>{task.dueDate}</span>
+                        <span className="text-xs text-gray-500">Categoria: {task.category}</span>
                       </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleEditTask(task.id)}
+                      className="text-blue-500 border-blue-500 hover:bg-blue-50"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleDeleteTask(task.id)}
+                      className="text-red-500 border-red-500 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </Card>
+              ))
+          )}
         </div>
-
-        {filteredTasks.length === 0 && (
-          <Card className="border-2 border-purple-200">
-            <CardContent className="p-8 text-center">
-              <CheckSquare className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600">Nenhuma tarefa encontrada</p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
