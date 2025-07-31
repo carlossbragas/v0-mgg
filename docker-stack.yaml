@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  api-despesas:
+    build:
+      context: . # O contexto de build é o diretório atual onde o Dockerfile está
+      dockerfile: Dockerfile
+    image: minhagrana-api:latest # Nome da imagem Docker que será criada
+    ports:
+      - "3000:3000" # Porta interna do contêiner
+    networks:
+      - network_public # Rede externa para acesso público (Traefik)
+      - internal_db_network # Rede interna para comunicação com o banco de dados
+    environment:
+      # Variáveis de ambiente para o Next.js e Prisma
+      DATABASE_URL: "postgresql://postgres:TxFEUjXbqEfbaawTVmdE@postgresql:5432/minhagrana?schema=public"
+      CORS_ORIGIN: "https://despesas.seulimacasafacil.com.br"
+      PORT: 3000 # Porta que o Next.js vai escutar
+      NODE_ENV: "production" # Garante que o Next.js rode em modo de produção
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      labels:
+        # Traefik Labels para roteamento e HTTPS
+        traefik.enable: "true"
+        traefik.http.routers.api-despesas.rule: "Host(`api-despesas.seulimacasafacil.com.br`)"
+        traefik.http.routers.api-despesas.entrypoints: "websecure"
+        traefik.http.routers.api-despesas.tls.certresolver: "myresolver" # Substitua 'myresolver' pelo nome do seu resolver Let's Encrypt no Traefik
+        traefik.http.routers.api-despesas.middlewares: "api-despesas-headers@docker,api-despesas-redirect@docker"
+
+        # Middlewares de segurança
+        traefik.http.middlewares.api-despesas-headers.headers.framedeny: "true"
+        traefik.http.middlewares.api-despesas-headers.headers.contenttypenosniff: "true"
+        traefik.http.middlewares.api-despesas-headers.headers.referrerpolicy: "strict-origin-when-cross-origin"
+        traefik.http.middlewares.api-despesas-redirect.redirectscheme.scheme: "https"
+        traefik.http.middlewares.api-despesas-redirect.redirectscheme.permanent: "true"
+
+  postgresql:
+    image: postgres:16-alpine # Versão estável do PostgreSQL
+    networks:
+      - internal_db_network # Rede interna para comunicação com a API
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Volume persistente para os dados do banco
+    environment:
+      POSTGRES_DB: minhagrana
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: TxFEUjXbqEfbaawTVmdE
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+volumes:
+  postgres_data: # Definição do volume persistente
+
+networks:
+  network_public:
+    external: true # Indica que esta rede já existe na sua VPS (Traefik)
+  internal_db_network:
+    internal: true # Rede interna para comunicação entre os serviços do stack
