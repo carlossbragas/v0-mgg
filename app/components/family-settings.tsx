@@ -1,326 +1,354 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { User, Mail, Users, Home, Plus, Edit, Trash2, Copy } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { Settings, Users, Copy, UserPlus
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Settings, Users, Copy, UserPlus, Trash2, Crown } from 'lucide-react'
+import { toast } from "sonner"
 
-interface FamilySettingsProps {
-  family: {
-    id: string
-    name: string
-    inviteCode: string
-    members: { id: string; name: string; email: string; role: string }[]
-  } | null
-  currentUser: { id: string; name: string; email: string; role: string } | null
+interface User {
+  id: string
+  name: string
+  email: string
+  role: "admin" | "member"
+  familyId?: string
 }
 
-export default function FamilySettings({ family, currentUser }: FamilySettingsProps) {
+interface Family {
+  id: string
+  name: string
+  adminId: string
+  members: User[]
+}
+
+interface FamilySettingsProps {
+  user: User
+  family: Family | null
+}
+
+export function FamilySettings({ user, family }: FamilySettingsProps) {
+  const [showInviteDialog, setShowInviteDialog] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState("")
   const [familyName, setFamilyName] = useState(family?.name || "")
-  const [currency, setCurrency] = useState("BRL")
-  const [language, setLanguage] = useState("pt-BR")
-  const [newMemberName, setNewMemberName] = useState("")
-  const [newMemberEmail, setNewMemberEmail] = useState("")
-  const [newMemberRole, setNewMemberRole] = useState("member")
-  const [familyMembers, setFamilyMembers] = useState(family?.members || [])
 
-  useEffect(() => {
-    if (family) {
-      setFamilyName(family.name)
-      setFamilyMembers(family.members)
-    }
-  }, [family])
-
-  const handleUpdateFamilyName = (e: React.FormEvent) => {
+  const handleInviteMember = (e: React.FormEvent) => {
     e.preventDefault()
-    alert(`Nome da família atualizado para: ${familyName} (Mock)`)
-    // Implement actual update logic
-  }
-
-  const handleAddMember = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newMemberName || !newMemberEmail) {
-      alert("Nome e e-mail do novo membro são obrigatórios.")
+    
+    if (!inviteEmail) {
+      toast.error("Digite um email válido")
       return
     }
-    const newMember = {
-      id: `user${familyMembers.length + 1}`, // Mock ID
-      name: newMemberName,
-      email: newMemberEmail,
-      role: newMemberRole,
+
+    // Simular convite
+    toast.success(`Convite enviado para ${inviteEmail}!`)
+    setInviteEmail("")
+    setShowInviteDialog(false)
+  }
+
+  const handleRemoveMember = (memberId: string, memberName: string) => {
+    // Simular remoção
+    toast.success(`${memberName} foi removido da família`)
+  }
+
+  const handleUpdateFamilyName = () => {
+    if (!familyName.trim()) {
+      toast.error("Nome da família não pode estar vazio")
+      return
     }
-    setFamilyMembers((prev) => [...prev, newMember])
-    setNewMemberName("")
-    setNewMemberEmail("")
-    setNewMemberRole("member")
-    alert(`Membro ${newMemberName} adicionado! (Mock)`)
-    // Implement actual add member logic
+    
+    // Simular atualização
+    toast.success("Nome da família atualizado!")
   }
 
-  const handleEditMember = (memberId: string) => {
-    alert(`Editar membro: ${memberId}`)
-    // Implement actual edit member logic (e.g., open a dialog with pre-filled data)
-  }
-
-  const handleDeleteMember = (memberId: string) => {
-    if (confirm("Tem certeza que deseja remover este membro da família?")) {
-      setFamilyMembers((prev) => prev.filter((member) => member.id !== memberId))
-      alert(`Membro ${memberId} removido! (Mock)`)
-      // Implement actual delete member logic
+  const copyInviteCode = () => {
+    if (family?.id) {
+      navigator.clipboard.writeText(family.id)
+      toast.success("Código de convite copiado!")
     }
   }
 
-  const handleCopyInviteCode = () => {
-    navigator.clipboard.writeText(family?.inviteCode || "").then(() => {
-      alert("Código de convite copiado para a área de transferência!")
-    })
-  }
+  const isAdmin = user.role === "admin"
 
   return (
-    <Card className="w-full bg-white text-[#007A33] rounded-lg shadow-lg">
-      <CardHeader className="text-center border-b pb-4">
-        <CardTitle className="text-2xl font-bold">Configurações da Família</CardTitle>
-      </CardHeader>
-      <CardContent className="p-6 space-y-6">
-        {/* Family Name */}
-        <div className="space-y-2">
-          <h3 className="text-xl font-semibold text-gray-700 flex items-center gap-2">
-            <Home className="h-5 w-5" /> Nome da Família
-          </h3>
-          <form onSubmit={handleUpdateFamilyName} className="flex gap-2">
-            <Input
-              id="family-name-setting"
-              type="text"
-              value={familyName}
-              onChange={(e) => setFamilyName(e.target.value)}
-              required
-              className="flex-1 border-[#007A33] focus:ring-[#007A33]"
-            />
-            <Button type="submit" className="bg-[#007A33] hover:bg-[#005F28] text-white">
-              <Edit className="h-4 w-4 mr-2" /> Salvar
-            </Button>
-          </form>
-        </div>
-
-        {/* Invite Code */}
-        <div className="space-y-2">
-          <h3 className="text-xl font-semibold text-gray-700 flex items-center gap-2">
-            <Users className="h-5 w-5" /> Código de Convite
-          </h3>
-          <div className="flex gap-2">
-            <Input
-              id="invite-code-setting"
-              type="text"
-              value={family?.inviteCode || "N/A"}
-              readOnly
-              className="flex-1 bg-gray-100 border-gray-300 text-gray-700"
-            />
-            <Button
-              type="button"
-              onClick={handleCopyInviteCode}
-              className="bg-gray-200 hover:bg-gray-300 text-[#007A33]"
-            >
-              <Copy className="h-4 w-4 mr-2" /> Copiar
-            </Button>
-          </div>
-          <p className="text-sm text-gray-500">Compartilhe este código para convidar novos membros para sua família.</p>
-        </div>
-
-        {/* Members List */}
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-gray-700 flex items-center gap-2">
-            <Users className="h-5 w-5" /> Membros da Família
-          </h3>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Configurações da Família */}
+      <Card className="retro-shadow">
+        <CardHeader>
+          <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Configurações da Família
+          </CardTitle>
+          <CardDescription className="text-sm">
+            Gerencie as configurações e membros da sua família
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Nome da Família */}
           <div className="space-y-3">
-            {familyMembers.map((member) => (
-              <Card key={member.id} className="p-3 flex items-center justify-between shadow-sm">
-                <div className="flex items-center space-x-3">
-                  <Avatar>
-                    <AvatarImage src={`/placeholder-user.jpg?name=${member.name}`} />
-                    <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-gray-800">{member.name}</p>
-                    <p className="text-sm text-gray-500">{member.email}</p>
-                    <p className="text-xs text-gray-400 capitalize">{member.role}</p>
-                  </div>
-                </div>
-                {currentUser?.role === "admin" && member.id !== currentUser?.id && (
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleEditMember(member.id)}
-                      className="text-blue-500 border-blue-500 hover:bg-blue-50"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleDeleteMember(member.id)}
-                      className="text-red-500 border-red-500 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </Card>
-            ))}
-          </div>
-
-          {currentUser?.role === "admin" && (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="w-full bg-[#007A33] hover:bg-[#005F28] text-white flex items-center gap-2 mt-4">
-                  <Plus className="h-5 w-5" /> Convidar Novo Membro
+            <Label htmlFor="family-name" className="text-sm font-medium">Nome da Família</Label>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Input
+                id="family-name"
+                value={familyName}
+                onChange={(e) => setFamilyName(e.target.value)}
+                placeholder="Nome da família"
+                disabled={!isAdmin}
+                className="flex-1 h-11"
+              />
+              {isAdmin && (
+                <Button 
+                  onClick={handleUpdateFamilyName}
+                  className="bg-retro-blue hover:bg-retro-blue/90 w-full sm:w-auto"
+                >
+                  Salvar
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Convidar Novo Membro</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleAddMember} className="grid gap-4 py-4">
-                  <div>
-                    <Label htmlFor="new-member-name" className="flex items-center gap-2 mb-1">
-                      <User className="h-4 w-4" /> Nome
-                    </Label>
-                    <Input
-                      id="new-member-name"
-                      value={newMemberName}
-                      onChange={(e) => setNewMemberName(e.target.value)}
-                      placeholder="Nome do membro"
-                      required
-                      className="border-[#007A33] focus:ring-[#007A33]"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="new-member-email" className="flex items-center gap-2 mb-1">
-                      <Mail className="h-4 w-4" /> E-mail
-                    </Label>
-                    <Input
-                      id="new-member-email"
-                      type="email"
-                      value={newMemberEmail}
-                      onChange={(e) => setNewMemberEmail(e.target.value)}
-                      placeholder="email@exemplo.com"
-                      required
-                      className="border-[#007A33] focus:ring-[#007A33]"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="new-member-role" className="flex items-center gap-2 mb-1">
-                      <Users className="h-4 w-4" /> Papel
-                    </Label>
-                    <Select value={newMemberRole} onValueChange={setNewMemberRole}>
-                      <SelectTrigger className="w-full border-[#007A33] focus:ring-[#007A33]">
-                        <SelectValue placeholder="Selecione o papel" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="member">Membro</SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button type="submit" className="bg-[#007A33] hover:bg-[#005F28] text-white mt-4">
-                    Adicionar Membro
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-          )}
-        </div>
-
-        {/* Preferences */}
-        <div className="space-y-2">
-          <h3 className="text-xl font-semibold text-gray-700 flex items-center gap-2">
-            <Edit className="h-5 w-5" /> Preferências
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="currency" className="mb-1">
-                Moeda
-              </Label>
-              <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger className="w-full border-[#007A33] focus:ring-[#007A33]">
-                  <SelectValue placeholder="Selecione a moeda" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="BRL">BRL - Real Brasileiro</SelectItem>
-                  <SelectItem value="USD">USD - Dólar Americano</SelectItem>
-                  <SelectItem value="EUR">EUR - Euro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="language" className="mb-1">
-                Idioma
-              </Label>
-              <Select value={language} onValueChange={setLanguage}>
-                <SelectTrigger className="w-full border-[#007A33] focus:ring-[#007A33]">
-                  <SelectValue placeholder="Selecione o idioma" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
-                  <SelectItem value="en-US">English (US)</SelectItem>
-                  <SelectItem value="es-ES">Español (España)</SelectItem>
-                </SelectContent>
-              </Select>
+              )}
             </div>
           </div>
-          <Button
-            onClick={() => alert("Preferências salvas! (Mock)")}
-            className="bg-[#007A33] hover:bg-[#005F28] text-white mt-4"
-          >
-            Salvar Preferências
-          </Button>
-        </div>
 
-        {/* User Profile (simplified, full profile in separate screen if needed) */}
-        <div className="space-y-2">
-          <h3 className="text-xl font-semibold text-gray-700 flex items-center gap-2">
-            <User className="h-5 w-5" /> Seu Perfil
-          </h3>
-          <Card className="p-3 flex items-center justify-between shadow-sm">
-            <div className="flex items-center space-x-3">
-              <Avatar>
-                <AvatarImage src={`/placeholder-user.jpg?name=${currentUser?.name}`} />
-                <AvatarFallback>{currentUser?.name?.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-medium text-gray-800">{currentUser?.name}</p>
-                <p className="text-sm text-gray-500">{currentUser?.email}</p>
-                <p className="text-xs text-gray-400 capitalize">{currentUser?.role}</p>
+          {/* Código de Convite */}
+          {family && (
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Código de Convite</Label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Input
+                  value={family.id}
+                  readOnly
+                  className="flex-1 h-11 bg-muted"
+                />
+                <Button 
+                  onClick={copyInviteCode}
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copiar
+                </Button>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Compartilhe este código para convidar novos membros
+              </p>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => alert("Editar perfil (Mock)")}
-                className="text-blue-500 border-blue-500 hover:bg-blue-50"
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => alert("Excluir conta (Mock)")}
-                className="text-red-500 border-red-500 hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Membros da Família */}
+      <Card className="retro-shadow">
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Membros da Família
+              </CardTitle>
+              <CardDescription className="text-sm">
+                {family?.members.length || 0} membro{(family?.members.length || 0) !== 1 ? 's' : ''}
+              </CardDescription>
             </div>
-          </Card>
-        </div>
-      </CardContent>
-    </Card>
+            {isAdmin && (
+              <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+                <DialogTrigger asChild>
+                  <Button className="bg-retro-green hover:bg-retro-green/90 w-full sm:w-auto">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Convidar Membro
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md mx-4">
+                  <DialogHeader>
+                    <DialogTitle>Convidar Novo Membro</DialogTitle>
+                    <DialogDescription>
+                      Digite o email da pessoa que você deseja convidar
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleInviteMember} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="invite-email">Email *</Label>
+                      <Input
+                        id="invite-email"
+                        type="email"
+                        placeholder="exemplo@email.com"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        required
+                        className="h-11"
+                      />
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => setShowInviteDialog(false)}
+                        className="flex-1 h-11 order-2 sm:order-1"
+                      >
+                        Cancelar
+                      </Button>
+                      <Button 
+                        type="submit" 
+                        className="flex-1 h-11 bg-retro-green hover:bg-retro-green/90 order-1 sm:order-2"
+                      >
+                        Enviar Convite
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {family?.members && family.members.length > 0 ? (
+            <div className="space-y-3">
+              {family.members.map((member) => (
+                <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-retro-purple text-white">
+                        {member.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm sm:text-base">{member.name}</p>
+                        {member.role === "admin" && (
+                          <Crown className="h-4 w-4 text-yellow-500" />
+                        )}
+                        {member.id === user.id && (
+                          <Badge variant="secondary" className="text-xs">Você</Badge>
+                        )}
+                      </div>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{member.email}</p>
+                      <Badge 
+                        variant={member.role === "admin" ? "default" : "secondary"}
+                        className="text-xs mt-1"
+                      >
+                        {member.role === "admin" ? "Administrador" : "Membro"}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  {isAdmin && member.id !== user.id && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="mx-4">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remover Membro</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja remover {member.name} da família? 
+                            Esta ação não pode ser desfeita.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                          <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => handleRemoveMember(member.id, member.name)}
+                            className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
+                          >
+                            Remover
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-4xl mb-4">👥</div>
+              <p className="text-muted-foreground">
+                Nenhum membro na família ainda
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Configurações de Conta */}
+      <Card className="retro-shadow">
+        <CardHeader>
+          <CardTitle className="text-lg sm:text-xl">Minha Conta</CardTitle>
+          <CardDescription className="text-sm">
+            Configurações da sua conta pessoal
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div>
+              <p className="font-medium text-sm sm:text-base">Nome</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{user.name}</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div>
+              <p className="font-medium text-sm sm:text-base">Email</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{user.email}</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div>
+              <p className="font-medium text-sm sm:text-base">Função</p>
+              <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-xs mt-1">
+                {user.role === "admin" ? "Administrador" : "Membro"}
+              </Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Zona de Perigo */}
+      {isAdmin && (
+        <Card className="retro-shadow border-red-200">
+          <CardHeader>
+            <CardTitle className="text-lg sm:text-xl text-red-600">Zona de Perigo</CardTitle>
+            <CardDescription className="text-sm">
+              Ações irreversíveis que afetam toda a família
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="w-full sm:w-auto">
+                  Excluir Família
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="mx-4">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir Família</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tem certeza que deseja excluir esta família? Todos os dados, 
+                    gastos e configurações serão perdidos permanentemente. 
+                    Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                  <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+                  <AlertDialogAction 
+                    className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
+                  >
+                    Excluir Família
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   )
 }
