@@ -1,4 +1,6 @@
-"use client"
+import { IotControl } from "./components/iot-control"
+// ou
+import IotControl from "./components/iot-control"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
