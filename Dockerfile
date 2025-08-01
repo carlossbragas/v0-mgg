@@ -1,6 +1,6 @@
 # Etapa base com compatibilidade para Prisma + OpenSSL
 FROM node:20-alpine AS base
-RUN apk add --no-cache libc6-compat openssl1.1-compat
+RUN apk add --no-cache libc6-compat openssl1.1
 
 # Etapa de dependências
 FROM base AS deps
