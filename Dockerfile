@@ -1,6 +1,6 @@
-# Etapa base com compatibilidade para Prisma + OpenSSL
-FROM node:20-alpine AS base
-RUN apk add --no-cache libc6-compat openssl1.1
+# Etapa base com OpenSSL (Debian)
+FROM node:20 AS base
+RUN apt-get update && apt-get install -y openssl
 
 # Etapa de dependências
 FROM base AS deps
@@ -13,7 +13,6 @@ FROM base AS builder
 WORKDIR /app
 RUN npm install -g pnpm
 
-# 👇 Aqui o segredo: passa o DATABASE_URL como ARG + ENV
 ARG DATABASE_URL
 ENV DATABASE_URL=$DATABASE_URL
 
@@ -22,7 +21,7 @@ COPY . .
 RUN npx prisma generate
 RUN pnpm build
 
-# Etapa final (produção)
+# Etapa final
 FROM base AS runner
 WORKDIR /app
 RUN npm install -g pnpm
