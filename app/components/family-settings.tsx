@@ -7,12 +7,26 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { Settings, Users, Copy, UserPlus
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Settings, Users, Copy, UserPlus, Trash2, Crown } from 'lucide-react'
+import { Settings, Users, Copy, UserPlus, Trash2, Crown } from "lucide-react"
 import { toast } from "sonner"
 
 interface User {
@@ -42,20 +56,18 @@ export function FamilySettings({ user, family }: FamilySettingsProps) {
 
   const handleInviteMember = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!inviteEmail) {
       toast.error("Digite um email válido")
       return
     }
 
-    // Simular convite
     toast.success(`Convite enviado para ${inviteEmail}!`)
     setInviteEmail("")
     setShowInviteDialog(false)
   }
 
   const handleRemoveMember = (memberId: string, memberName: string) => {
-    // Simular remoção
     toast.success(`${memberName} foi removido da família`)
   }
 
@@ -64,8 +76,7 @@ export function FamilySettings({ user, family }: FamilySettingsProps) {
       toast.error("Nome da família não pode estar vazio")
       return
     }
-    
-    // Simular atualização
+
     toast.success("Nome da família atualizado!")
   }
 
@@ -92,7 +103,6 @@ export function FamilySettings({ user, family }: FamilySettingsProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Nome da Família */}
           <div className="space-y-3">
             <Label htmlFor="family-name" className="text-sm font-medium">Nome da Família</Label>
             <div className="flex flex-col sm:flex-row gap-3">
@@ -105,7 +115,7 @@ export function FamilySettings({ user, family }: FamilySettingsProps) {
                 className="flex-1 h-11"
               />
               {isAdmin && (
-                <Button 
+                <Button
                   onClick={handleUpdateFamilyName}
                   className="bg-retro-blue hover:bg-retro-blue/90 w-full sm:w-auto"
                 >
@@ -115,7 +125,6 @@ export function FamilySettings({ user, family }: FamilySettingsProps) {
             </div>
           </div>
 
-          {/* Código de Convite */}
           {family && (
             <div className="space-y-3">
               <Label className="text-sm font-medium">Código de Convite</Label>
@@ -125,7 +134,7 @@ export function FamilySettings({ user, family }: FamilySettingsProps) {
                   readOnly
                   className="flex-1 h-11 bg-muted"
                 />
-                <Button 
+                <Button
                   onClick={copyInviteCode}
                   variant="outline"
                   className="w-full sm:w-auto"
@@ -152,7 +161,7 @@ export function FamilySettings({ user, family }: FamilySettingsProps) {
                 Membros da Família
               </CardTitle>
               <CardDescription className="text-sm">
-                {family?.members.length || 0} membro{(family?.members.length || 0) !== 1 ? 's' : ''}
+                {family?.members.length || 0} membro{(family?.members.length || 0) !== 1 ? "s" : ""}
               </CardDescription>
             </div>
             {isAdmin && (
@@ -184,16 +193,16 @@ export function FamilySettings({ user, family }: FamilySettingsProps) {
                       />
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
+                      <Button
+                        type="button"
+                        variant="outline"
                         onClick={() => setShowInviteDialog(false)}
                         className="flex-1 h-11 order-2 sm:order-1"
                       >
                         Cancelar
                       </Button>
-                      <Button 
-                        type="submit" 
+                      <Button
+                        type="submit"
                         className="flex-1 h-11 bg-retro-green hover:bg-retro-green/90 order-1 sm:order-2"
                       >
                         Enviar Convite
@@ -219,15 +228,15 @@ export function FamilySettings({ user, family }: FamilySettingsProps) {
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-sm sm:text-base">{member.name}</p>
-                        {member.role === "admin" && (
-                          <Crown className="h-4 w-4 text-yellow-500" />
-                        )}
+                        {member.role === "admin" && <Crown className="h-4 w-4 text-yellow-500" />}
                         {member.id === user.id && (
-                          <Badge variant="secondary" className="text-xs">Você</Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            Você
+                          </Badge>
                         )}
                       </div>
                       <p className="text-xs sm:text-sm text-muted-foreground">{member.email}</p>
-                      <Badge 
+                      <Badge
                         variant={member.role === "admin" ? "default" : "secondary"}
                         className="text-xs mt-1"
                       >
@@ -235,7 +244,7 @@ export function FamilySettings({ user, family }: FamilySettingsProps) {
                       </Badge>
                     </div>
                   </div>
-                  
+
                   {isAdmin && member.id !== user.id && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -247,13 +256,12 @@ export function FamilySettings({ user, family }: FamilySettingsProps) {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Remover Membro</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Tem certeza que deseja remover {member.name} da família? 
-                            Esta ação não pode ser desfeita.
+                            Tem certeza que deseja remover {member.name} da família? Esta ação não pode ser desfeita.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter className="flex-col sm:flex-row gap-2">
                           <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
-                          <AlertDialogAction 
+                          <AlertDialogAction
                             onClick={() => handleRemoveMember(member.id, member.name)}
                             className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
                           >
@@ -269,9 +277,7 @@ export function FamilySettings({ user, family }: FamilySettingsProps) {
           ) : (
             <div className="text-center py-8">
               <div className="text-4xl mb-4">👥</div>
-              <p className="text-muted-foreground">
-                Nenhum membro na família ainda
-              </p>
+              <p className="text-muted-foreground">Nenhum membro na família ainda</p>
             </div>
           )}
         </CardContent>
@@ -281,9 +287,7 @@ export function FamilySettings({ user, family }: FamilySettingsProps) {
       <Card className="retro-shadow">
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl">Minha Conta</CardTitle>
-          <CardDescription className="text-sm">
-            Configurações da sua conta pessoal
-          </CardDescription>
+          <CardDescription className="text-sm">Configurações da sua conta pessoal</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -292,18 +296,21 @@ export function FamilySettings({ user, family }: FamilySettingsProps) {
               <p className="text-xs sm:text-sm text-muted-foreground">{user.name}</p>
             </div>
           </div>
-          
+
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div>
               <p className="font-medium text-sm sm:text-base">Email</p>
               <p className="text-xs sm:text-sm text-muted-foreground">{user.email}</p>
             </div>
           </div>
-          
+
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div>
               <p className="font-medium text-sm sm:text-base">Função</p>
-              <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-xs mt-1">
+              <Badge
+                variant={user.role === "admin" ? "default" : "secondary"}
+                className="text-xs mt-1"
+              >
                 {user.role === "admin" ? "Administrador" : "Membro"}
               </Badge>
             </div>
@@ -331,16 +338,13 @@ export function FamilySettings({ user, family }: FamilySettingsProps) {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Excluir Família</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Tem certeza que deseja excluir esta família? Todos os dados, 
-                    gastos e configurações serão perdidos permanentemente. 
-                    Esta ação não pode ser desfeita.
+                    Tem certeza que deseja excluir esta família? Todos os dados, gastos e configurações
+                    serão perdidos permanentemente. Esta ação não pode ser desfeita.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex-col sm:flex-row gap-2">
                   <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
-                  <AlertDialogAction 
-                    className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
-                  >
+                  <AlertDialogAction className="w-full sm:w-auto bg-red-600 hover:bg-red-700">
                     Excluir Família
                   </AlertDialogAction>
                 </AlertDialogFooter>
