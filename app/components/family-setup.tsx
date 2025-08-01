@@ -4,134 +4,160 @@ import type React from "react"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Home, User, Mail, Users } from "lucide-react"
+import { toast } from "sonner"
+import { Users, Plus, Trash2 } from "lucide-react"
 
-interface FamilySetupScreenProps {
-  onFamilySetup: (familyData: any) => void
+interface User {
+  id: string
+  name: string
+  email: string
+  role: "admin" | "member"
+  familyId?: string
 }
 
-export default function FamilySetupScreen({ onFamilySetup }: FamilySetupScreenProps) {
-  const [tab, setTab] = useState("create") // 'create' or 'join'
-  const [familyName, setFamilyName] = useState("")
-  const [adminName, setAdminName] = useState("")
-  const [adminEmail, setAdminEmail] = useState("")
-  const [inviteCode, setInviteCode] = useState("")
+interface Family {
+  id: string
+  name: string
+  adminId: string
+  members: User[]
+}
 
-  const handleCreateFamily = (e: React.FormEvent) => {
-    e.preventDefault()
-    onFamilySetup({ familyName, adminName, adminEmail, type: "create" })
+interface FamilySetupProps {
+  user: User
+  onFamilySetup: (family: Family) => void
+}
+
+export function FamilySetup({ user, onFamilySetup }: FamilySetupProps) {
+  const [familyName, setFamilyName] = useState("")
+  const [members, setMembers] = useState<{ name: string; email: string }[]>([])
+  const [newMember, setNewMember] = useState({ name: "", email: "" })
+
+  const addMember = () => {
+    if (newMember.name && newMember.email) {
+      setMembers([...members, newMember])
+      setNewMember({ name: "", email: "" })
+      toast.success("Membro adicionado!")
+    } else {
+      toast.error("Preencha nome e email do membro")
+    }
   }
 
-  const handleJoinFamily = (e: React.FormEvent) => {
+  const removeMember = (index: number) => {
+    setMembers(members.filter((_, i) => i !== index))
+    toast.success("Membro removido!")
+  }
+
+  const handleSetupFamily = (e: React.FormEvent) => {
     e.preventDefault()
-    onFamilySetup({ inviteCode, type: "join" })
+
+    if (!familyName) {
+      toast.error("Digite o nome da família")
+      return
+    }
+
+    const familyMembers: User[] = [
+      user,
+      ...members.map((member, index) => ({
+        id: `member-${index + 1}`,
+        name: member.name,
+        email: member.email,
+        role: "member" as const,
+        familyId: "family-1",
+      })),
+    ]
+
+    const family: Family = {
+      id: "family-1",
+      name: familyName,
+      adminId: user.id,
+      members: familyMembers,
+    }
+
+    toast.success("Família configurada com sucesso!")
+    onFamilySetup(family)
   }
 
   return (
-    <Card className="w-full max-w-sm bg-white text-[#007A33] rounded-lg shadow-lg p-6">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold mb-4">Configurar Família</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-gray-200 rounded-lg p-1 mb-4">
-            <TabsTrigger
-              value="create"
-              className="data-[state=active]:bg-[#007A33] data-[state=active]:text-white rounded-md p-2"
-            >
-              Criar Nova Família
-            </TabsTrigger>
-            <TabsTrigger
-              value="join"
-              className="data-[state=active]:bg-[#007A33] data-[state=active]:text-white rounded-md p-2"
-            >
-              Entrar em Família
-            </TabsTrigger>
-          </TabsList>
+    <div className="min-h-screen flex items-center justify-center p-4 retro-gradient">
+      <Card className="w-full max-w-2xl retro-shadow retro-border">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 h-16 w-16 bg-retro-blue rounded-full flex items-center justify-center">
+            <Users className="h-8 w-8 text-white" />
+          </div>
+          <CardTitle className="text-2xl font-bold font-retro">Configurar Família</CardTitle>
+          <CardDescription>Configure sua família para começar a usar o MinhaGrana</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSetupFamily} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="family-name">Nome da Família</Label>
+              <Input
+                id="family-name"
+                placeholder="Ex: Família Silva"
+                value={familyName}
+                onChange={(e) => setFamilyName(e.target.value)}
+                required
+              />
+            </div>
 
-          <TabsContent value="create" className="space-y-4">
-            <form onSubmit={handleCreateFamily} className="space-y-4">
-              <div>
-                <Label htmlFor="family-name" className="flex items-center gap-2 mb-1">
-                  <Home className="h-4 w-4" /> Nome da Família
-                </Label>
-                <Input
-                  id="family-name"
-                  type="text"
-                  placeholder="Ex: Família Silva"
-                  value={familyName}
-                  onChange={(e) => setFamilyName(e.target.value)}
-                  required
-                  className="border-[#007A33] focus:ring-[#007A33]"
-                />
+            <div className="space-y-4">
+              <Label>Membros da Família</Label>
+
+              {/* Admin sempre presente */}
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{user.name} (Você)</p>
+                    <p className="text-sm text-muted-foreground">{user.email} • Administrador</p>
+                  </div>
+                  <div className="bg-retro-orange text-white px-2 py-1 rounded text-xs font-bold">ADMIN</div>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="admin-name" className="flex items-center gap-2 mb-1">
-                  <User className="h-4 w-4" /> Seu Nome (Admin)
-                </Label>
+
+              {/* Membros adicionados */}
+              {members.map((member, index) => (
+                <div key={index} className="p-3 bg-muted rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{member.name}</p>
+                      <p className="text-sm text-muted-foreground">{member.email} • Membro</p>
+                    </div>
+                    <Button type="button" variant="destructive" size="sm" onClick={() => removeMember(index)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+
+              {/* Adicionar novo membro */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 <Input
-                  id="admin-name"
-                  type="text"
-                  placeholder="Seu nome"
-                  value={adminName}
-                  onChange={(e) => setAdminName(e.target.value)}
-                  required
-                  className="border-[#007A33] focus:ring-[#007A33]"
+                  placeholder="Nome do membro"
+                  value={newMember.name}
+                  onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
                 />
-              </div>
-              <div>
-                <Label htmlFor="admin-email" className="flex items-center gap-2 mb-1">
-                  <Mail className="h-4 w-4" /> Seu E-mail (Admin)
-                </Label>
                 <Input
-                  id="admin-email"
                   type="email"
-                  placeholder="seu@email.com"
-                  value={adminEmail}
-                  onChange={(e) => setAdminEmail(e.target.value)}
-                  required
-                  className="border-[#007A33] focus:ring-[#007A33]"
+                  placeholder="Email do membro"
+                  value={newMember.email}
+                  onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
                 />
+                <Button type="button" onClick={addMember} variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar
+                </Button>
               </div>
-              <Button
-                type="submit"
-                className="w-full bg-[#007A33] hover:bg-[#005F28] text-white font-bold py-3 rounded-lg text-lg transition-colors"
-              >
-                Criar Família
-              </Button>
-            </form>
-          </TabsContent>
+            </div>
 
-          <TabsContent value="join" className="space-y-4">
-            <form onSubmit={handleJoinFamily} className="space-y-4">
-              <div>
-                <Label htmlFor="invite-code" className="flex items-center gap-2 mb-1">
-                  <Users className="h-4 w-4" /> Código de Convite
-                </Label>
-                <Input
-                  id="invite-code"
-                  type="text"
-                  placeholder="Insira o código"
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value)}
-                  required
-                  className="border-[#007A33] focus:ring-[#007A33]"
-                />
-              </div>
-              <Button
-                type="submit"
-                className="w-full bg-[#007A33] hover:bg-[#005F28] text-white font-bold py-3 rounded-lg text-lg transition-colors"
-              >
-                Entrar na Família
-              </Button>
-            </form>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+            <Button type="submit" className="w-full bg-retro-green hover:bg-retro-green/90">
+              Criar Família
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

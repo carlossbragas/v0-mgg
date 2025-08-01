@@ -1,169 +1,306 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { DollarSign, TrendingUp, PieChart, Plus, List, BarChart, ListTodo, ShoppingCart, Lightbulb } from "lucide-react"
-import ExpenseForm from "./expense-form"
-import ExpensesList from "./expenses-list"
-import Reports from "./reports"
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  PiggyBank,
+  TrendingUp,
+  TrendingDown,
+  Users,
+  LogOut,
+  Plus,
+  ShoppingCart,
+  CheckSquare,
+  Smartphone,
+  Menu,
+} from "lucide-react"
+import { ExpenseForm } from "./expense-form"
+import { ExpensesList } from "./expenses-list"
+import { Reports } from "./reports"
+import { MemberWallet } from "./member-wallet"
+import { FamilySettings } from "./family-settings"
+import { ShoppingList } from "./shopping-list"
+import { TasksList } from "./tasks-list"
+import { IoTControl } from "./iot-control"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
-interface DashboardProps {
-  family: {
-    id: string
-    name: string
-    inviteCode: string
-    members: { id: string; name: string; email: string; role: string }[]
-  } | null
-  currentUser: { id: string; name: string; email: string; role: string } | null
+interface User {
+  id: string
+  name: string
+  email: string
+  role: "admin" | "member"
+  familyId?: string
 }
 
-export default function Dashboard({ family, currentUser }: DashboardProps) {
+interface Family {
+  id: string
+  name: string
+  adminId: string
+  members: User[]
+}
+
+interface DashboardProps {
+  user: User
+  family: Family | null
+  onLogout: () => void
+}
+
+export function Dashboard({ user, family, onLogout }: DashboardProps) {
+  const [activeTab, setActiveTab] = useState("overview")
   const [showExpenseForm, setShowExpenseForm] = useState(false)
-  const [showExpensesList, setShowExpensesList] = useState(false)
-  const [showReports, setShowReports] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  // Mock Data for Dashboard
-  const totalBalance = 5200.75
-  const monthSpend = 1250.3
-  const categorySpend = [
-    { name: "Alimentação", value: 450 },
-    { name: "Transporte", value: 200 },
-    { name: "Moradia", value: 300 },
-    { name: "Lazer", value: 150 },
-    { name: "Outros", value: 150.3 },
-  ]
+  // Dados simulados
+  const stats = {
+    totalBalance: 2580.5,
+    monthlyIncome: 4500.0,
+    monthlyExpenses: 1919.5,
+    familyMembers: family?.members.length || 1,
+  }
 
-  const mockTasks = [
-    { id: "t1", title: "Pagar conta de luz", status: "pending", dueDate: "2025-08-10" },
-    { id: "t2", title: "Comprar presente da vovó", status: "pending", dueDate: "2025-08-15" },
-  ]
-
-  const mockShoppingItems = [
-    { id: "s1", name: "Leite", status: "pending" },
-    { id: "s2", name: "Pão", status: "pending" },
+  const tabs = [
+    { value: "overview", label: "Início", icon: PiggyBank },
+    { value: "expenses", label: "Gastos", icon: TrendingDown },
+    { value: "reports", label: "Relatórios", icon: TrendingUp },
+    { value: "wallet", label: "Carteira", icon: Users },
+    { value: "shopping", label: "Compras", icon: ShoppingCart },
+    { value: "tasks", label: "Tarefas", icon: CheckSquare },
+    { value: "iot", label: "IoT", icon: Smartphone },
+    { value: "settings", label: "Config", icon: Menu },
   ]
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-[#007A33] mb-6">Dashboard da {family?.name || "Família"}</h2>
+    <div className="min-h-screen bg-gradient-to-br from-retro-yellow/20 to-retro-green/20">
+      {/* Mobile Header */}
+      <header className="bg-white shadow-sm border-b retro-border safe-area-top">
+        <div className="px-4 sm:px-6">
+          <div className="flex justify-between items-center h-14 sm:h-16">
+            <div className="flex items-center space-x-3">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 bg-retro-orange rounded-full flex items-center justify-center">
+                <span className="text-lg sm:text-xl font-bold text-white">💰</span>
+              </div>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold font-retro">MinhaGrana</h1>
+                {family && (
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate max-w-32 sm:max-w-none">
+                    {family.name}
+                  </p>
+                )}
+              </div>
+            </div>
 
-      {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-white rounded-lg shadow-md p-4 flex items-center space-x-4 border-l-4 border-[#007A33]">
-          <DollarSign className="h-8 w-8 text-[#007A33]" />
-          <div>
-            <CardTitle className="text-lg font-semibold text-gray-600">Saldo Total</CardTitle>
-            <CardContent className="p-0 text-2xl font-bold text-[#007A33]">R$ {totalBalance.toFixed(2)}</CardContent>
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="text-right hidden sm:block">
+                <p className="font-medium text-sm">{user.name}</p>
+                <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-xs">
+                  {user.role === "admin" ? "Admin" : "Membro"}
+                </Badge>
+              </div>
+
+              {/* Mobile Menu */}
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild className="sm:hidden">
+                  <Button variant="outline" size="sm">
+                    <Menu className="h-4 w-4" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-64">
+                  <div className="flex flex-col space-y-4 mt-6">
+                    <div className="text-center pb-4 border-b">
+                      <p className="font-medium">{user.name}</p>
+                      <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-xs mt-1">
+                        {user.role === "admin" ? "Administrador" : "Membro"}
+                      </Badge>
+                    </div>
+                    <Button variant="outline" onClick={onLogout} className="w-full bg-transparent">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sair
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+
+              <Button variant="outline" size="sm" onClick={onLogout} className="hidden sm:flex bg-transparent">
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </Card>
-        <Card className="bg-white rounded-lg shadow-md p-4 flex items-center space-x-4 border-l-4 border-red-500">
-          <TrendingUp className="h-8 w-8 text-red-500" />
-          <div>
-            <CardTitle className="text-lg font-semibold text-gray-600">Gasto do Mês</CardTitle>
-            <CardContent className="p-0 text-2xl font-bold text-red-500">R$ {monthSpend.toFixed(2)}</CardContent>
-          </div>
-        </Card>
-        <Card className="bg-white rounded-lg shadow-md p-4 flex items-center space-x-4 border-l-4 border-blue-500">
-          <PieChart className="h-8 w-8 text-blue-500" />
-          <div>
-            <CardTitle className="text-lg font-semibold text-gray-600">Gráfico por Categoria</CardTitle>
-            <CardContent className="p-0 text-2xl font-bold text-blue-500">
-              {/* Placeholder for a small chart */}
-              <div className="h-10 w-full bg-gray-100 rounded-md flex overflow-hidden">
-                {categorySpend.map((cat, index, arr) => {
-                  const total = arr.reduce((sum, c) => sum + c.value, 0)
-                  const width = (cat.value / total) * 100 + "%"
-                  const colors = ["bg-purple-500", "bg-yellow-500", "bg-green-500", "bg-orange-500", "bg-gray-400"]
+        </div>
+      </header>
+
+      <main className="px-4 sm:px-6 lg:px-8 py-4 sm:py-8 max-w-7xl mx-auto safe-area-bottom">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+          {/* Mobile Tabs - Scrollable */}
+          <div className="sm:hidden">
+            <ScrollArea className="w-full whitespace-nowrap">
+              <TabsList className="inline-flex h-12 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground mobile-tabs">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon
                   return (
-                    <div
-                      key={cat.name}
-                      className={`${colors[index % colors.length]} h-full`}
-                      style={{ width }}
-                      title={`${cat.name}: R$ ${cat.value}`}
-                    />
+                    <TabsTrigger
+                      key={tab.value}
+                      value={tab.value}
+                      className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-xs font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm min-w-[80px]"
+                    >
+                      <Icon className="h-4 w-4 mb-1" />
+                      <span className="block text-xs">{tab.label}</span>
+                    </TabsTrigger>
                   )
                 })}
-              </div>
-            </CardContent>
+              </TabsList>
+            </ScrollArea>
           </div>
-        </Card>
-      </div>
 
-      {/* Quick Actions */}
-      <Card className="bg-white rounded-lg shadow-md p-6">
-        <CardTitle className="text-xl font-semibold text-[#007A33] mb-4">Ações Rápidas</CardTitle>
-        <CardContent className="p-0 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <Dialog open={showExpenseForm} onOpenChange={setShowExpenseForm}>
-            <DialogTrigger asChild>
-              <Button className="w-full bg-[#007A33] hover:bg-[#005F28] text-white py-3 rounded-lg flex items-center justify-center space-x-2">
-                <Plus className="h-5 w-5" />
-                <span>Criar Despesa</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] p-0">
-              <ExpenseForm familyMembers={family?.members || []} onSave={() => setShowExpenseForm(false)} />
-            </DialogContent>
-          </Dialog>
+          {/* Desktop Tabs */}
+          <TabsList className="hidden sm:grid w-full grid-cols-8">
+            {tabs.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value} className="text-xs lg:text-sm">
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-          <Dialog open={showExpensesList} onOpenChange={setShowExpensesList}>
-            <DialogTrigger asChild>
-              <Button className="w-full bg-gray-200 hover:bg-gray-300 text-[#007A33] py-3 rounded-lg flex items-center justify-center space-x-2">
-                <List className="h-5 w-5" />
-                <span>Ver Despesas</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[800px] p-0">
-              <ExpensesList familyMembers={family?.members || []} />
-            </DialogContent>
-          </Dialog>
+          <TabsContent value="overview" className="space-y-4 sm:space-y-6">
+            {/* Cards de Estatísticas - Mobile First */}
+            <div className="mobile-grid">
+              <Card className="retro-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs sm:text-sm font-medium">Saldo Total</CardTitle>
+                  <PiggyBank className="h-4 w-4 text-retro-green" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg sm:text-2xl font-bold text-retro-green">
+                    R$ {stats.totalBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Dialog open={showReports} onOpenChange={setShowReports}>
-            <DialogTrigger asChild>
-              <Button className="w-full bg-gray-200 hover:bg-gray-300 text-[#007A33] py-3 rounded-lg flex items-center justify-center space-x-2">
-                <BarChart className="h-5 w-5" />
-                <span>Ver Relatórios</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[800px] p-0">
-              <Reports familyMembers={family?.members || []} />
-            </DialogContent>
-          </Dialog>
-        </CardContent>
-      </Card>
+              <Card className="retro-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs sm:text-sm font-medium">Receita Mensal</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-retro-blue" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg sm:text-2xl font-bold text-retro-blue">
+                    R$ {stats.monthlyIncome.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </div>
+                </CardContent>
+              </Card>
 
-      {/* Organization Section */}
-      <Card className="bg-white rounded-lg shadow-md p-6">
-        <CardTitle className="text-xl font-semibold text-[#007A33] mb-4">Organização Familiar</CardTitle>
-        <CardContent className="p-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card className="bg-purple-50 border-l-4 border-purple-500 p-4 flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-purple-700">Tarefas Pendentes</h3>
-              <p className="text-2xl font-bold text-purple-900">
-                {mockTasks.filter((t) => t.status === "pending").length}
-              </p>
+              <Card className="retro-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs sm:text-sm font-medium">Gastos Mensais</CardTitle>
+                  <TrendingDown className="h-4 w-4 text-retro-orange" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg sm:text-2xl font-bold text-retro-orange">
+                    R$ {stats.monthlyExpenses.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="retro-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs sm:text-sm font-medium">Membros</CardTitle>
+                  <Users className="h-4 w-4 text-retro-purple" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg sm:text-2xl font-bold text-retro-purple">{stats.familyMembers}</div>
+                </CardContent>
+              </Card>
             </div>
-            <ListTodo className="h-10 w-10 text-purple-500" />
-          </Card>
-          <Card className="bg-blue-50 border-l-4 border-blue-500 p-4 flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-blue-700">Itens de Compra</h3>
-              <p className="text-2xl font-bold text-blue-900">
-                {mockShoppingItems.filter((s) => s.status === "pending").length}
-              </p>
-            </div>
-            <ShoppingCart className="h-10 w-10 text-blue-500" />
-          </Card>
-          <Card className="bg-cyan-50 border-l-4 border-cyan-500 p-4 flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-cyan-700">Dispositivos IoT</h3>
-              <p className="text-2xl font-bold text-cyan-900">3 Ativos</p>
-            </div>
-            <Lightbulb className="h-10 w-10 text-cyan-500" />
-          </Card>
-        </CardContent>
-      </Card>
+
+            {/* Ações Rápidas - Mobile Optimized */}
+            <Card className="retro-shadow">
+              <CardHeader>
+                <CardTitle className="text-lg sm:text-xl">Ações Rápidas</CardTitle>
+                <CardDescription className="text-sm">Acesse rapidamente as funcionalidades principais</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                  <Button
+                    onClick={() => setShowExpenseForm(true)}
+                    className="h-16 sm:h-20 bg-retro-orange hover:bg-retro-orange/90 flex-col text-xs sm:text-sm"
+                  >
+                    <Plus className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
+                    Novo Gasto
+                  </Button>
+                  <Button
+                    onClick={() => setActiveTab("shopping")}
+                    variant="outline"
+                    className="h-16 sm:h-20 flex-col text-xs sm:text-sm"
+                  >
+                    <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
+                    Compras
+                  </Button>
+                  <Button
+                    onClick={() => setActiveTab("tasks")}
+                    variant="outline"
+                    className="h-16 sm:h-20 flex-col text-xs sm:text-sm"
+                  >
+                    <CheckSquare className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
+                    Tarefas
+                  </Button>
+                  <Button
+                    onClick={() => setActiveTab("iot")}
+                    variant="outline"
+                    className="h-16 sm:h-20 flex-col text-xs sm:text-sm"
+                  >
+                    <Smartphone className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
+                    IoT
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Gastos Recentes - Mobile Optimized */}
+            <Card className="retro-shadow">
+              <CardHeader>
+                <CardTitle className="text-lg sm:text-xl">Gastos Recentes</CardTitle>
+                <CardDescription className="text-sm">Últimas transações da família</CardDescription>
+              </CardHeader>
+              <CardContent className="p-3 sm:p-6">
+                <ExpensesList limit={5} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="expenses">
+            <ExpensesList />
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <Reports />
+          </TabsContent>
+
+          <TabsContent value="wallet">
+            <MemberWallet user={user} family={family} />
+          </TabsContent>
+
+          <TabsContent value="shopping">
+            <ShoppingList family={family} />
+          </TabsContent>
+
+          <TabsContent value="tasks">
+            <TasksList family={family} />
+          </TabsContent>
+
+          <TabsContent value="iot">
+            <IoTControl family={family} />
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <FamilySettings user={user} family={family} />
+          </TabsContent>
+        </Tabs>
+
+        {/* Modal de Novo Gasto */}
+        {showExpenseForm && <ExpenseForm onClose={() => setShowExpenseForm(false)} user={user} family={family} />}
+      </main>
     </div>
   )
 }

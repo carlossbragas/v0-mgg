@@ -1,136 +1,113 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { format, isPast } from "date-fns"
-import { Plus, Edit, Trash2, CalendarIcon, User, Tag, Flag } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { CheckSquare, Plus, Trash2, Calendar, User, AlertCircle } from "lucide-react"
+import { toast } from "sonner"
+
+interface Family {
+  id: string
+  name: string
+  adminId: string
+  members: { id: string; name: string; email: string; role: string }[]
+}
 
 interface Task {
   id: string
   title: string
-  description?: string
-  assignedTo: string // member ID
-  dueDate: Date
-  priority: "high" | "medium" | "low"
-  category: string
-  isCompleted: boolean
+  description: string
+  assignedTo: string
+  priority: "low" | "medium" | "high"
+  dueDate: string
+  completed: boolean
+  createdBy: string
+  createdAt: string
 }
 
 interface TasksListProps {
-  familyMembers: { id: string; name: string; email: string; role: string }[]
+  family: Family | null
 }
 
-export default function TasksList({ familyMembers }: TasksListProps) {
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: "t1",
-      title: "Pagar conta de luz",
-      description: "Vencimento dia 10",
-      assignedTo: "user1",
-      dueDate: new Date("2025-08-10"),
-      priority: "high",
-      category: "Financeiro",
-      isCompleted: false,
-    },
-    {
-      id: "t2",
-      title: "Comprar presente da vovó",
-      description: "Aniversário dia 15",
-      assignedTo: "user2",
-      dueDate: new Date("2025-08-15"),
-      priority: "medium",
-      category: "Pessoal",
-      isCompleted: false,
-    },
-    {
-      id: "t3",
-      title: "Limpar a garagem",
-      assignedTo: "user3",
-      dueDate: new Date("2025-07-20"),
-      priority: "low",
-      category: "Casa",
-      isCompleted: true,
-    },
-  ])
+export function TasksList({ family }: TasksListProps) {
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [showAddDialog, setShowAddDialog] = useState(false)
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    assignedTo: "",
+    priority: "medium" as "low" | "medium" | "high",
+    dueDate: "",
+  })
 
-  const [newTaskTitle, setNewTaskTitle] = useState("")
-  const [newTaskDescription, setNewTaskDescription] = useState("")
-  const [newTaskAssignedTo, setNewTaskAssignedTo] = useState("")
-  const [newTaskDueDate, setNewTaskDueDate] = useState<Date | undefined>(new Date())
-  const [newTaskPriority, setNewTaskPriority] = useState<"high" | "medium" | "low">("medium")
-  const [newTaskCategory, setNewTaskCategory] = useState("")
-
-  const categories = ["Casa", "Financeiro", "Saúde", "Educação", "Trabalho", "Pessoal", "Outros"]
+  useEffect(() => {
+    // Carregar tarefas do localStorage
+    const savedTasks = JSON.parse(localStorage.getItem("family-tasks") || "[]")
+    setTasks(savedTasks)
+  }, [])
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newTaskTitle || !newTaskAssignedTo || !newTaskDueDate || !newTaskCategory) {
-      alert("Título, responsável, data limite e categoria são obrigatórios para a tarefa.")
+
+    if (!formData.title || !formData.assignedTo) {
+      toast.error("Preencha todos os campos obrigatórios")
       return
     }
 
     const newTask: Task = {
-      id: `t${tasks.length + 1}`,
-      title: newTaskTitle,
-      description: newTaskDescription,
-      assignedTo: newTaskAssignedTo,
-      dueDate: newTaskDueDate,
-      priority: newTaskPriority,
-      category: newTaskCategory,
-      isCompleted: false,
+      id: Date.now().toString(),
+      title: formData.title,
+      description: formData.description,
+      assignedTo: formData.assignedTo,
+      priority: formData.priority,
+      dueDate: formData.dueDate,
+      completed: false,
+      createdBy: "user-1", // Simular usuário atual
+      createdAt: new Date().toISOString(),
     }
-    setTasks((prev) => [...prev, newTask])
-    setNewTaskTitle("")
-    setNewTaskDescription("")
-    setNewTaskAssignedTo("")
-    setNewTaskDueDate(new Date())
-    setNewTaskPriority("medium")
-    setNewTaskCategory("")
-    alert("Tarefa adicionada com sucesso!")
+
+    const updatedTasks = [newTask, ...tasks]
+    setTasks(updatedTasks)
+    localStorage.setItem("family-tasks", JSON.stringify(updatedTasks))
+
+    toast.success("Tarefa criada com sucesso!")
+    setFormData({ title: "", description: "", assignedTo: "", priority: "medium", dueDate: "" })
+    setShowAddDialog(false)
   }
 
-  const handleToggleComplete = (id: string, isChecked: boolean) => {
-    setTasks((prev) => prev.map((task) => (task.id === id ? { ...task, isCompleted: isChecked } : task)))
-  }
-
-  const handleEditTask = (id: string) => {
-    alert(`Editar tarefa: ${id}`)
-    // Implement actual edit logic (e.g., open a dialog with pre-filled data)
+  const handleToggleTask = (id: string) => {
+    const updatedTasks = tasks.map((task) => (task.id === id ? { ...task, completed: !task.completed } : task))
+    setTasks(updatedTasks)
+    localStorage.setItem("family-tasks", JSON.stringify(updatedTasks))
   }
 
   const handleDeleteTask = (id: string) => {
-    if (confirm("Tem certeza que deseja excluir esta tarefa?")) {
-      setTasks((prev) => prev.filter((task) => task.id !== id))
-      alert("Tarefa excluída!")
-    }
+    const updatedTasks = tasks.filter((task) => task.id !== id)
+    setTasks(updatedTasks)
+    localStorage.setItem("family-tasks", JSON.stringify(updatedTasks))
+    toast.success("Tarefa removida!")
   }
 
-  const getMemberName = (id: string) => {
-    return familyMembers.find((m) => m.id === id)?.name || "Desconhecido"
-  }
+  const pendingTasks = tasks.filter((task) => !task.completed)
+  const completedTasks = tasks.filter((task) => task.completed)
 
-  const getPriorityColor = (priority: "high" | "medium" | "low") => {
-    switch (priority) {
-      case "high":
-        return "text-red-600"
-      case "medium":
-        return "text-yellow-600"
-      case "low":
-        return "text-green-600"
-      default:
-        return "text-gray-600"
-    }
-  }
-
-  const getPriorityBadgeColor = (priority: "high" | "medium" | "low") => {
+  const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
         return "bg-red-100 text-red-800"
@@ -143,192 +120,293 @@ export default function TasksList({ familyMembers }: TasksListProps) {
     }
   }
 
-  return (
-    <Card className="w-full bg-white text-[#007A33] rounded-lg shadow-lg">
-      <CardHeader className="text-center border-b pb-4">
-        <CardTitle className="text-2xl font-bold">Lista de Tarefas</CardTitle>
-      </CardHeader>
-      <CardContent className="p-6 space-y-6">
-        {/* Add New Task Form */}
-        <h3 className="text-xl font-semibold text-gray-700 mb-4">Adicionar Nova Tarefa</h3>
-        <form onSubmit={handleAddTask} className="space-y-4 p-4 border rounded-lg bg-purple-50">
-          <div>
-            <Label htmlFor="task-title" className="flex items-center gap-2 mb-1">
-              Título da Tarefa
-            </Label>
-            <Input
-              id="task-title"
-              type="text"
-              placeholder="Ex: Pagar conta de luz"
-              value={newTaskTitle}
-              onChange={(e) => setNewTaskTitle(e.target.value)}
-              required
-              className="border-purple-500 focus:ring-purple-500"
-            />
-          </div>
-          <div>
-            <Label htmlFor="task-description" className="mb-1">
-              Descrição
-            </Label>
-            <Input
-              id="task-description"
-              type="text"
-              placeholder="Detalhes da tarefa..."
-              value={newTaskDescription}
-              onChange={(e) => setNewTaskDescription(e.target.value)}
-              className="border-purple-500 focus:ring-purple-500"
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="task-assigned-to" className="flex items-center gap-2 mb-1">
-                <User className="h-4 w-4" /> Responsável
-              </Label>
-              <Select value={newTaskAssignedTo} onValueChange={setNewTaskAssignedTo} required>
-                <SelectTrigger className="w-full border-purple-500 focus:ring-purple-500">
-                  <SelectValue placeholder="Selecione um membro" />
-                </SelectTrigger>
-                <SelectContent>
-                  {familyMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="task-due-date" className="flex items-center gap-2 mb-1">
-                <CalendarIcon className="h-4 w-4" /> Data Limite
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={`w-full justify-start text-left font-normal ${
-                      !newTaskDueDate && "text-muted-foreground"
-                    }`}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {newTaskDueDate ? format(newTaskDueDate, "PPP") : <span>Selecione uma data</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={newTaskDueDate} onSelect={setNewTaskDueDate} initialFocus />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="task-priority" className="flex items-center gap-2 mb-1">
-                <Flag className="h-4 w-4" /> Prioridade
-              </Label>
-              <Select value={newTaskPriority} onValueChange={setNewTaskPriority}>
-                <SelectTrigger className="w-full border-purple-500 focus:ring-purple-500">
-                  <SelectValue placeholder="Selecione a prioridade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="high">Alta</SelectItem>
-                  <SelectItem value="medium">Média</SelectItem>
-                  <SelectItem value="low">Baixa</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="task-category" className="flex items-center gap-2 mb-1">
-                <Tag className="h-4 w-4" /> Categoria
-              </Label>
-              <Select value={newTaskCategory} onValueChange={setNewTaskCategory} required>
-                <SelectTrigger className="w-full border-purple-500 focus:ring-purple-500">
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white">
-            <Plus className="h-5 w-5 mr-2" /> Adicionar Tarefa
-          </Button>
-        </form>
+  const getPriorityLabel = (priority: string) => {
+    switch (priority) {
+      case "high":
+        return "Alta"
+      case "medium":
+        return "Média"
+      case "low":
+        return "Baixa"
+      default:
+        return "Média"
+    }
+  }
 
-        {/* Tasks List */}
-        <h3 className="text-xl font-semibold text-gray-700 mt-6 mb-4">Tarefas da Família</h3>
-        <div className="space-y-3">
-          {tasks.length === 0 ? (
-            <p className="text-center text-gray-500 py-4">Nenhuma tarefa cadastrada.</p>
-          ) : (
-            tasks
-              .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime()) // Sort by due date
-              .map((task) => (
-                <Card
-                  key={task.id}
-                  className={`p-3 flex items-center justify-between shadow-sm ${
-                    task.isCompleted
-                      ? "bg-green-50 border-l-4 border-green-500"
-                      : isPast(task.dueDate) && !task.isCompleted
-                        ? "bg-red-50 border-l-4 border-red-500"
-                        : "bg-white border-l-4 border-purple-500"
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <Checkbox
-                      id={`task-${task.id}`}
-                      checked={task.isCompleted}
-                      onCheckedChange={(checked) => handleToggleComplete(task.id, checked as boolean)}
-                      className="data-[state=checked]:bg-purple-600 data-[state=checked]:text-white"
+  const isOverdue = (dueDate: string) => {
+    if (!dueDate) return false
+    return new Date(dueDate) < new Date()
+  }
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return ""
+    return new Date(dateString).toLocaleDateString("pt-BR")
+  }
+
+  const getMemberName = (memberId: string) => {
+    const member = family?.members.find((m) => m.id === memberId)
+    return member?.name || "Membro não encontrado"
+  }
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
+      <Card className="retro-shadow">
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+                <CheckSquare className="h-5 w-5" />
+                Tarefas da Família
+              </CardTitle>
+              <CardDescription className="text-sm">
+                {pendingTasks.length} tarefa{pendingTasks.length !== 1 ? "s" : ""} pendente
+                {pendingTasks.length !== 1 ? "s" : ""}
+                {completedTasks.length > 0 &&
+                  ` • ${completedTasks.length} concluída${completedTasks.length !== 1 ? "s" : ""}`}
+              </CardDescription>
+            </div>
+            <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+              <DialogTrigger asChild>
+                <Button className="bg-retro-blue hover:bg-retro-blue/90 w-full sm:w-auto">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Tarefa
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Nova Tarefa</DialogTitle>
+                  <DialogDescription>Crie uma nova tarefa para a família</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleAddTask} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="task-title">Título *</Label>
+                    <Input
+                      id="task-title"
+                      placeholder="Ex: Lavar a louça"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      required
+                      className="h-11"
                     />
-                    <div>
-                      <p
-                        className={`font-medium text-gray-800 ${task.isCompleted ? "line-through text-gray-500" : ""}`}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="task-description">Descrição</Label>
+                    <Textarea
+                      id="task-description"
+                      placeholder="Detalhes da tarefa..."
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      rows={3}
+                      className="resize-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Responsável *</Label>
+                      <Select
+                        value={formData.assignedTo}
+                        onValueChange={(value) => setFormData({ ...formData, assignedTo: value })}
                       >
-                        {task.title}
-                      </p>
-                      {task.description && <p className="text-sm text-gray-600">{task.description}</p>}
-                      <p className="text-xs text-gray-500">Responsável: {getMemberName(task.assignedTo)}</p>
-                      <p className="text-xs text-gray-500">
-                        Data Limite: {format(task.dueDate, "dd/MM/yyyy")}
-                        {isPast(task.dueDate) && !task.isCompleted && (
-                          <span className="ml-1 text-red-600 font-semibold">(Atrasada)</span>
-                        )}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-xs font-semibold ${getPriorityColor(task.priority)}`}>
-                          Prioridade: {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                        </span>
-                        <span className="text-xs text-gray-500">Categoria: {task.category}</span>
-                      </div>
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {family?.members.map((member) => (
+                            <SelectItem key={member.id} value={member.id}>
+                              {member.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Prioridade</Label>
+                      <Select
+                        value={formData.priority}
+                        onValueChange={(value: "low" | "medium" | "high") =>
+                          setFormData({ ...formData, priority: value })
+                        }
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Baixa</SelectItem>
+                          <SelectItem value="medium">Média</SelectItem>
+                          <SelectItem value="high">Alta</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+
+                  <div className="space-y-2">
+                    <Label htmlFor="due-date">Data de Vencimento</Label>
+                    <Input
+                      id="due-date"
+                      type="date"
+                      value={formData.dueDate}
+                      onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                      className="h-11"
+                    />
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4">
                     <Button
+                      type="button"
                       variant="outline"
-                      size="icon"
-                      onClick={() => handleEditTask(task.id)}
-                      className="text-blue-500 border-blue-500 hover:bg-blue-50"
+                      onClick={() => setShowAddDialog(false)}
+                      className="flex-1 h-11 order-2 sm:order-1"
                     >
-                      <Edit className="h-4 w-4" />
+                      Cancelar
                     </Button>
                     <Button
+                      type="submit"
+                      className="flex-1 h-11 bg-retro-blue hover:bg-retro-blue/90 order-1 sm:order-2"
+                    >
+                      Criar Tarefa
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Tarefas Pendentes */}
+      {pendingTasks.length > 0 && (
+        <Card className="retro-shadow">
+          <CardHeader>
+            <CardTitle className="text-lg">Tarefas Pendentes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {pendingTasks.map((task) => (
+                <div key={task.id} className="border rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      checked={task.completed}
+                      onCheckedChange={() => handleToggleTask(task.id)}
+                      className="mt-1 data-[state=checked]:bg-retro-blue data-[state=checked]:text-white"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+                        <h3 className="font-semibold text-sm sm:text-base">{task.title}</h3>
+                        <div className="flex items-center gap-2">
+                          <Badge className={getPriorityColor(task.priority)}>{getPriorityLabel(task.priority)}</Badge>
+                          {task.dueDate && isOverdue(task.dueDate) && (
+                            <Badge variant="destructive" className="text-xs">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              Atrasada
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {task.description && <p className="text-sm text-muted-foreground mb-3">{task.description}</p>}
+
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          <span>{getMemberName(task.assignedTo)}</span>
+                        </div>
+                        {task.dueDate && (
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            <span className={isOverdue(task.dueDate) ? "text-red-600" : ""}>
+                              {formatDate(task.dueDate)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <Button
                       variant="outline"
-                      size="icon"
+                      size="sm"
                       onClick={() => handleDeleteTask(task.id)}
-                      className="text-red-500 border-red-500 hover:bg-red-50"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                </Card>
-              ))
-          )}
-        </div>
-      </CardContent>
-    </Card>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tarefas Concluídas */}
+      {completedTasks.length > 0 && (
+        <Card className="retro-shadow">
+          <CardHeader>
+            <CardTitle className="text-lg">Tarefas Concluídas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {completedTasks.slice(0, 5).map((task) => (
+                <div key={task.id} className="border rounded-lg p-4 bg-muted/50">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      checked={task.completed}
+                      onCheckedChange={() => handleToggleTask(task.id)}
+                      className="mt-1 data-[state=checked]:bg-retro-blue data-[state=checked]:text-white"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+                        <h3 className="font-semibold text-sm sm:text-base line-through text-muted-foreground">
+                          {task.title}
+                        </h3>
+                        <Badge className={getPriorityColor(task.priority)}>{getPriorityLabel(task.priority)}</Badge>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          <span>{getMemberName(task.assignedTo)}</span>
+                        </div>
+                        {task.dueDate && (
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            <span>{formatDate(task.dueDate)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteTask(task.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Estado Vazio */}
+      {tasks.length === 0 && (
+        <Card className="retro-shadow">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="text-6xl mb-4">✅</div>
+            <h3 className="text-xl font-semibold mb-2">Nenhuma Tarefa</h3>
+            <p className="text-muted-foreground text-center mb-6">Comece criando tarefas para organizar a família</p>
+            <Button onClick={() => setShowAddDialog(true)} className="bg-retro-blue hover:bg-retro-blue/90">
+              <Plus className="h-4 w-4 mr-2" />
+              Criar Primeira Tarefa
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   )
 }
