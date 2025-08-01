@@ -1,12 +1,12 @@
-# Etapa base
+# Etapa base com dependências
 FROM node:20-alpine AS base
+RUN apk add --no-cache libc6-compat
 
 # Etapa de dependências
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
+RUN npm install -g pnpm && pnpm install --no-frozen-lockfile
 
 # Etapa de build
 FROM base AS builder
