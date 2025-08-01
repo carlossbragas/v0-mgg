@@ -2,31 +2,36 @@ version: '3.8'
 
 services:
   api-despesas:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DATABASE_URL: ${DATABASE_URL}
     image: minhagrana-api:latest
-    networks:
-      - network_public
-      - internal_db_network
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: "postgresql://postgres:TxFEUjXbqEfbaawTVmdE@postgresql:5432/minhagrana"
-      CORS_ORIGIN: "https://despesas.seulimacasafacil.com.br"
-      PORT: "3000"
       NODE_ENV: "production"
       NEXT_PUBLIC_API_BASE_URL: "https://api-despesas.seulimacasafacil.com.br"
       NEXT_TELEMETRY_DISABLED: "1"
+    networks:
+      - network_public
+      - internal_db_network
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
       labels:
-       traefik.enable: "true"
-       traefik.http.routers.api-despesas.rule: "Host(`api-despesas.seulimacasafacil.com.br`) || Host(`despesas.seulimacasafacil.com.br`)"
-       traefik.http.routers.api-despesas.entrypoints: "websecure"
-       traefik.http.routers.api-despesas.tls.certresolver: "letsencrypt"
-       traefik.http.services.api-despesas.loadbalancer.server.port: "3000"
-
+        traefik.enable: "true"
+        traefik.http.routers.api-despesas.rule: "Host(api-despesas.seulimacasafacil.com.br) || Host(despesas.seulimacasafacil.com.br)"
+        traefik.http.routers.api-despesas.entrypoints: "websecure"
+        traefik.http.routers.api-despesas.tls.certresolver: "letsencrypt"
+        traefik.http.services.api-despesas.loadbalancer.server.port: "${PORT}"
 
   postgresql:
     image: postgres:16-alpine
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: minhagrana
       POSTGRES_USER: postgres

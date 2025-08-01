@@ -1,6 +1,6 @@
-# Etapa base com dependências
+# Etapa base com compatibilidade para Prisma + OpenSSL
 FROM node:20-alpine AS base
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl1.1-compat
 
 # Etapa de dependências
 FROM base AS deps
@@ -12,6 +12,11 @@ RUN npm install -g pnpm && pnpm install --no-frozen-lockfile
 FROM base AS builder
 WORKDIR /app
 RUN npm install -g pnpm
+
+# 👇 Aqui o segredo: passa o DATABASE_URL como ARG + ENV
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
@@ -20,8 +25,6 @@ RUN pnpm build
 # Etapa final (produção)
 FROM base AS runner
 WORKDIR /app
-
-# Instala pnpm para o comando final funcionar
 RUN npm install -g pnpm
 
 COPY --from=builder /app/.next ./.next
