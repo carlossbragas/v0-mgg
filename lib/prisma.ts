@@ -1,17 +1,52 @@
 import { PrismaClient } from "@prisma/client"
 
-// Garante que apenas uma instância do PrismaClient seja criada
-// e reutilizada em todo o ambiente de desenvolvimento.
-// Isso evita problemas de "hot-reloading" no Next.js que poderiam
-// criar múltiplas instâncias do PrismaClient.
-const prismaClientSingleton = () => {
-  return new PrismaClient()
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
 }
 
-declare global {
-  var prismaGlobal: undefined | ReturnType<typeof prismaClientSingleton>
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
+  })
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
+
+// Função para conectar ao banco
+export async function connectDB() {
+  try {
+    await prisma.$connect()
+    console.log("✅ Conectado ao banco de dados")
+  } catch (error) {
+    console.error("❌ Erro ao conectar ao banco:", error)
+    throw error
+  }
 }
 
-export const prisma = globalThis.prismaGlobal ?? prismaClientSingleton()
+// Função para desconectar do banco
+export async function disconnectDB() {
+  try {
+    await prisma.$disconnect()
+    console.log("✅ Desconectado do banco de dados")
+  } catch (error) {
+    console.error("❌ Erro ao desconectar do banco:", error)
+  }
+}
 
-if (process.env.NODE_ENV !== "production") globalThis.prismaGlobal = prisma
+// Middleware para logs de query em desenvolvimento
+if (process.env.NODE_ENV === "development") {
+  prisma.$use(async (params, next) => {
+    const before = Date.now()
+    const result = await next(params)
+    const after = Date.now()
+    console.log(`Query ${params.model}.${params.action} took ${after - before}ms`)
+    return result
+  })
+}
+
+export default prisma

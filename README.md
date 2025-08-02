@@ -1,185 +1,327 @@
-# MinhaGrana PWA 💰
+# 🏠 MinhaGrana PWA
 
-Uma aplicação PWA para controle financeiro familiar com design retrô e funcionalidades completas.
+PWA para controle financeiro familiar com design retrô, desenvolvido com Next.js 14, Prisma e PostgreSQL.
 
-## 🚀 Funcionalidades
+## ✨ Funcionalidades
 
-- 📱 **PWA** - Funciona offline e pode ser instalado no celular
-- 👨‍👩‍👧‍👦 **Controle Familiar** - Cada família é uma instância isolada
-- 💰 **Gestão de Gastos** - Controle completo de receitas e despesas
+- 📱 **PWA Completo** - Funciona offline e pode ser instalado
+- 💰 **Controle Financeiro** - Gestão de gastos e receitas familiares
+- 👨‍👩‍👧‍👦 **Multi-usuário** - Cada família é uma instância isolada
 - 📊 **Relatórios Visuais** - Gráficos e análises detalhadas
-- 👤 **Carteiras Individuais** - Controle por membro da família
-- 🛒 **Lista de Compras** - Colaborativa e sincronizada
-- ✅ **Gerenciador de Tarefas** - Organização familiar
-- 🏠 **Controle IoT** - Integração com dispositivos inteligentes
+- 🛒 **Lista de Compras** - Colaborativa para toda a família
+- ✅ **Gerenciador de Tarefas** - Organize as atividades familiares
+- 🏠 **Controle IoT** - Gerencie dispositivos inteligentes
 - 🎨 **Design Retrô** - Interface nostálgica e moderna
+- 📱 **Mobile First** - Otimizado para dispositivos móveis
 
-## 🐳 Docker Setup
+## 🚀 Deploy na Vercel
 
-### Desenvolvimento
+### 1. Preparação
 
 \`\`\`bash
-# Clonar o repositório
-git clone <repository-url>
+# Clone o repositório
+git clone https://github.com/seu-usuario/minha-grana-pwa.git
 cd minha-grana-pwa
 
-# Configurar ambiente
-chmod +x scripts/setup.sh
-./scripts/setup.sh
-
-# Ou manualmente:
-cp .env.example .env
-docker-compose up --build
+# Instale as dependências
+npm install
 \`\`\`
 
-### Produção
+### 2. Configuração do Banco de Dados
 
+#### Opção A: Neon (Recomendado)
+1. Acesse [Neon](https://neon.tech)
+2. Crie um novo projeto PostgreSQL
+3. Copie a connection string
+
+#### Opção B: Supabase
+1. Acesse [Supabase](https://supabase.com)
+2. Crie um novo projeto
+3. Vá em Settings > Database
+4. Copie a connection string
+
+### 3. Deploy na Vercel
+
+#### Via GitHub (Recomendado)
+1. Faça push do código para o GitHub
+2. Acesse [Vercel](https://vercel.com)
+3. Importe o repositório
+4. Configure as variáveis de ambiente:
+
+\`\`\`env
+DATABASE_URL=sua_connection_string_aqui
+DIRECT_URL=sua_connection_string_aqui
+NEXTAUTH_URL=https://seu-app.vercel.app
+NEXTAUTH_SECRET=sua_chave_secreta_aqui
+NEXT_PUBLIC_API_BASE_URL=https://seu-app.vercel.app/api
+\`\`\`
+
+5. Deploy automático! 🎉
+
+#### Via CLI
 \`\`\`bash
-# Configurar variáveis de produção
-cp .env.example .env.production
-# Editar .env.production com valores reais
+# Instale a CLI da Vercel
+npm i -g vercel
+
+# Faça login
+vercel login
 
 # Deploy
-chmod +x scripts/deploy.sh
-./scripts/deploy.sh
-
-# Ou manualmente:
-docker-compose -f docker-compose.prod.yml up --build -d
+vercel --prod
 \`\`\`
 
-## 📋 Comandos Úteis
+### 4. Configuração Pós-Deploy
+
+1. **Domínio Personalizado** (opcional)
+   - Vá em Settings > Domains na Vercel
+   - Adicione seu domínio personalizado
+
+2. **Analytics** (opcional)
+   - Ative o Vercel Analytics no dashboard
+
+3. **Monitoramento**
+   - Configure alertas de erro
+   - Monitore performance
+
+## 🛠️ Desenvolvimento Local
 
 \`\`\`bash
-# Desenvolvimento
-npm run docker:dev      # Iniciar em modo desenvolvimento
-npm run docker:prod     # Iniciar em modo produção
-npm run docker:down     # Parar containers
-npm run docker:clean    # Limpar tudo (containers, volumes, imagens)
+# Instalar dependências
+npm install
 
-# Banco de dados
-docker-compose exec app npx prisma migrate dev
-docker-compose exec app npx prisma generate
-docker-compose exec app npx prisma studio
+# Configurar banco de dados
+cp .env.example .env
+# Edite o .env com suas configurações
 
-# Logs
-docker-compose logs -f app      # Logs da aplicação
-docker-compose logs -f postgres # Logs do banco
+# Executar migrações
+npm run db:push
+
+# Iniciar desenvolvimento
+npm run dev
 \`\`\`
 
-## 🌐 Acessos
+## 📦 Scripts Disponíveis
 
-- **Aplicação**: http://localhost:3000
-- **Adminer** (DB Manager): http://localhost:8080
-- **Prisma Studio**: http://localhost:5555
-
-### Credenciais do Banco (desenvolvimento)
-- **Host**: localhost:5432
-- **Database**: minhagrana
-- **Username**: postgres
-- **Password**: minhagrana123
+\`\`\`bash
+npm run dev          # Desenvolvimento
+npm run build        # Build de produção
+npm run start        # Iniciar produção
+npm run lint         # Linter
+npm run type-check   # Verificação de tipos
+npm run vercel-build # Build para Vercel
+npm run db:generate  # Gerar cliente Prisma
+npm run db:push      # Aplicar schema ao banco
+npm run db:migrate   # Executar migrações
+npm run db:studio    # Interface visual do banco
+\`\`\`
 
 ## 🏗️ Arquitetura
 
 \`\`\`
 minha-grana-pwa/
-├── app/                    # Next.js App Router
+├── app/                    # App Router (Next.js 14)
 │   ├── api/               # API Routes
-│   ├── components/        # Componentes React
-│   └── globals.css        # Estilos globais
-├── components/            # Componentes UI (shadcn/ui)
-├── lib/                   # Utilitários e configurações
-├── prisma/               # Schema e migrações do banco
+│   ├── components/        # Componentes da aplicação
+│   ├── globals.css        # Estilos globais
+│   ├── layout.tsx         # Layout principal
+│   ├── page.tsx          # Página inicial
+│   └── manifest.json     # PWA Manifest
+├── components/            # Componentes reutilizáveis
+│   ├── ui/               # Componentes de UI (shadcn)
+│   └── theme-provider.tsx
+├── lib/                   # Utilitários
+│   ├── prisma.ts         # Cliente Prisma
+│   ├── utils.ts          # Funções utilitárias
+│   └── validation.ts     # Schemas de validação
+├── prisma/               # Schema do banco
+│   └── schema.prisma
 ├── public/               # Arquivos estáticos
-├── scripts/              # Scripts de automação
-├── docker-compose.yml    # Configuração Docker (dev)
-├── docker-compose.prod.yml # Configuração Docker (prod)
-├── Dockerfile            # Multi-stage build
-└── nginx.conf            # Configuração Nginx (prod)
+├── styles/               # Estilos adicionais
+├── next.config.mjs       # Configuração Next.js
+├── tailwind.config.ts    # Configuração Tailwind
+├── vercel.json          # Configuração Vercel
+└── package.json
 \`\`\`
 
-## 🔧 Configuração
+## 🎨 Design System
 
-### Variáveis de Ambiente
+- **Cores Principais**: Verde retrô (#007A33), Laranja (#FF6B35), Ciano (#00CED1)
+- **Tipografia**: Inter (Google Fonts)
+- **Componentes**: shadcn/ui + customizações retrô
+- **Ícones**: Lucide React
+- **Animações**: Tailwind CSS + CSS custom
 
-\`\`\`env
-# Database
-DATABASE_URL="postgresql://postgres:password@localhost:5432/minhagrana"
+## 🔒 Segurança
 
-# Next.js
-NEXT_PUBLIC_API_BASE_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-secret-key"
-NEXTAUTH_URL="http://localhost:3000"
-\`\`\`
-
-### Banco de Dados
-
-O projeto usa PostgreSQL com Prisma ORM. As migrações são executadas automaticamente no primeiro build.
-
-### PWA
-
-A aplicação é configurada como PWA com:
-- Service Worker para cache offline
-- Manifest para instalação
-- Ícones otimizados para diferentes dispositivos
-
-## 🚀 Deploy
-
-### Docker Swarm (Produção)
-
-\`\`\`bash
-# Inicializar swarm
-docker swarm init
-
-# Deploy do stack
-docker stack deploy -c docker-compose.prod.yml minhagrana
-
-# Verificar serviços
-docker service ls
-\`\`\`
-
-### Variáveis de Produção
-
-\`\`\`env
-POSTGRES_PASSWORD="secure-password"
-NEXT_PUBLIC_API_BASE_URL="https://yourdomain.com"
-NEXTAUTH_SECRET="production-secret-key"
-NEXTAUTH_URL="https://yourdomain.com"
-\`\`\`
-
-## 🛠️ Desenvolvimento
-
-### Estrutura do Projeto
-
-- **Frontend**: Next.js 14 com App Router
-- **Backend**: API Routes do Next.js
-- **Database**: PostgreSQL com Prisma
-- **UI**: shadcn/ui + Tailwind CSS
-- **Charts**: Recharts
-- **Forms**: React Hook Form + Zod
-
-### Adicionando Novas Funcionalidades
-
-1. Criar componente em `app/components/`
-2. Adicionar rota de API em `app/api/`
-3. Atualizar schema do Prisma se necessário
-4. Executar migrações
+- ✅ Validação de dados com Zod
+- ✅ Sanitização de inputs
+- ✅ Headers de segurança
+- ✅ CORS configurado
+- ✅ Rate limiting (Vercel)
+- ✅ Isolamento por família
 
 ## 📱 PWA Features
 
-- ✅ Offline First
-- ✅ Installable
-- ✅ Responsive Design
-- ✅ Push Notifications (futuro)
-- ✅ Background Sync (futuro)
+- ✅ Service Worker
+- ✅ Manifest completo
+- ✅ Ícones em todas as resoluções
+- ✅ Shortcuts de aplicativo
+- ✅ Funciona offline
+- ✅ Instalável
+- ✅ Push notifications (preparado)
+
+## 🚀 Performance
+
+- ✅ Next.js 14 App Router
+- ✅ Server Components
+- ✅ Image Optimization
+- ✅ Bundle Analyzer
+- ✅ Lazy Loading
+- ✅ Cache Strategy
+- ✅ Edge Functions
 
 ## 🤝 Contribuição
 
 1. Fork o projeto
-2. Crie uma branch para sua feature
-3. Commit suas mudanças
-4. Push para a branch
+2. Crie uma branch (`git checkout -b feature/nova-funcionalidade`)
+3. Commit suas mudanças (`git commit -am 'Adiciona nova funcionalidade'`)
+4. Push para a branch (`git push origin feature/nova-funcionalidade`)
 5. Abra um Pull Request
 
 ## 📄 Licença
 
-Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 🆘 Suporte
+
+- 📧 Email: suporte@minhagrana.com
+- 💬 Discord: [MinhaGrana Community](https://discord.gg/minhagrana)
+- 📖 Documentação: [docs.minhagrana.com](https://docs.minhagrana.com)
+
+---
+
+Feito com ❤️ para famílias brasileiras 🇧🇷
+\`\`\`
+
+```plaintext file=".gitignore"
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+.env
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# prisma
+/prisma/migrations/
+
+# docker
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.test
+.env.production
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# next.js build output
+.next
+
+# nuxt.js build output
+.nuxt
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test

@@ -1,24 +1,23 @@
 {
   "name": "minha-grana-pwa",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
+  "description": "PWA para controle financeiro familiar com design retrô",
   "scripts": {
     "build": "next build",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:reset": "prisma migrate reset",
-    "db:seed": "prisma db seed",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
     "dev": "next dev",
-    "docker:clean": "docker-compose down -v --rmi all",
-    "docker:dev": "docker-compose up --build",
-    "docker:down": "docker-compose down",
-    "docker:prod": "docker-compose -f docker-compose.prod.yml up --build",
+    "postinstall": "prisma generate",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+    "type-check": "tsc --noEmit",
+    "vercel-build": "prisma generate && prisma db push && next build"
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.3.4",
     "@prisma/client": "latest",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "latest",
@@ -39,6 +38,7 @@
     "@radix-ui/react-scroll-area": "latest",
     "@radix-ui/react-select": "latest",
     "@radix-ui/react-separator": "latest",
+    "@radix-ui/react-sheet": "^1.0.4",
     "@radix-ui/react-slider": "latest",
     "@radix-ui/react-slot": "latest",
     "@radix-ui/react-switch": "latest",
@@ -51,14 +51,12 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "latest",
-    "cors": "^2.8.5",
-    "date-fns": "^3.0.6",
+    "date-fns": "^2.30.0",
     "embla-carousel-react": "latest",
     "input-otp": "latest",
     "lucide-react": "^0.454.0",
     "next": "14.2.16",
     "next-themes": "latest",
-    "prisma": "^5.7.1",
     "react": "^18",
     "react-day-picker": "latest",
     "react-dom": "^18",
@@ -72,18 +70,19 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
     "@types/node": "^22",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "autoprefixer": "^10.0.1",
-    "eslint": "^8",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.56.0",
     "eslint-config-next": "14.0.4",
     "postcss": "^8.5",
+    "prisma": "^5.7.1",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.6.2",
     "typescript": "^5"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
