@@ -1,39 +1,72 @@
-# Etapa base com OpenSSL (Debian)
-FROM node:20 AS base
-RUN apt-get update && apt-get install -y openssl
+# Dockerfile multi-stage para desenvolvimento e produção
+FROM node:20-alpine AS base
 
-# Etapa de dependências
-FROM base AS deps
-WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
-RUN npm install -g pnpm && pnpm install --no-frozen-lockfile
+# Instalar dependências necessárias
+RUN apk add --no-cache libc6-compat openssl
 
-# Etapa de build
-FROM base AS builder
 WORKDIR /app
+
+# Instalar pnpm globalmente
 RUN npm install -g pnpm
 
-ARG DATABASE_URL
-ENV DATABASE_URL=$DATABASE_URL
+# Copiar arquivos de dependências
+COPY package.json pnpm-lock.yaml* ./
 
-COPY --from=deps /app/node_modules ./node_modules
+# Stage para desenvolvimento
+FROM base AS development
+
+# Instalar todas as dependências (incluindo devDependencies)
+RUN pnpm install
+
+# Copiar código fonte
 COPY . .
+
+# Gerar cliente Prisma
 RUN npx prisma generate
-RUN pnpm build
 
-# Etapa final
-FROM base AS runner
-WORKDIR /app
-RUN npm install -g pnpm
-
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/prisma ./prisma
-
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+# Expor porta
 EXPOSE 3000
 
-CMD ["pnpm", "start"]
+# Comando padrão para desenvolvimento
+CMD ["pnpm", "dev"]
+
+# Stage para build de produção
+FROM base AS builder
+
+# Instalar dependências
+RUN pnpm install --frozen-lockfile
+
+# Copiar código fonte
+COPY . .
+
+# Gerar cliente Prisma
+RUN npx prisma generate
+
+# Build da aplicação
+RUN pnpm build
+
+# Stage final para produção
+FROM base AS production
+
+# Criar usuário não-root
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copiar arquivos necessários do builder
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+
+# Mudar para usuário não-root
+USER nextjs
+
+# Expor porta
+EXPOSE 3000
+
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+
+# Comando para produção
+CMD ["node", "server.js"]

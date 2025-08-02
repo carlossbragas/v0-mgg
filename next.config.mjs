@@ -9,6 +9,12 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Configuração para standalone build (necessário para Docker)
+  output: 'standalone',
+  // Configurações para PWA
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/client'],
+  },
 }
 
 export default nextConfig

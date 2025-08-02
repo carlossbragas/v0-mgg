@@ -7,7 +7,13 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
+    "db:reset": "prisma migrate reset",
+    "db:seed": "prisma db seed",
     "dev": "next dev",
+    "docker:clean": "docker-compose down -v --rmi all",
+    "docker:dev": "docker-compose up --build",
+    "docker:down": "docker-compose down",
+    "docker:prod": "docker-compose -f docker-compose.prod.yml up --build",
     "lint": "next lint",
     "start": "next start"
   },
@@ -76,5 +82,8 @@
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

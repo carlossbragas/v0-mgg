@@ -1,136 +1,185 @@
-# MinhaGrana PWA
+# MinhaGrana PWA 💰
 
-Este é um protótipo funcional de um aplicativo PWA (Progressive Web App) chamado **MinhaGrana**, focado em organização financeira familiar com um visual retrô moderno.
+Uma aplicação PWA para controle financeiro familiar com design retrô e funcionalidades completas.
 
-## Visão Geral
+## 🚀 Funcionalidades
 
-O MinhaGrana visa proporcionar clareza e usabilidade na gestão de despesas e tarefas domésticas entre os membros da família. Cada família é tratada como uma instância separada, garantindo que os dados sejam visíveis apenas para os membros autorizados.
+- 📱 **PWA** - Funciona offline e pode ser instalado no celular
+- 👨‍👩‍👧‍👦 **Controle Familiar** - Cada família é uma instância isolada
+- 💰 **Gestão de Gastos** - Controle completo de receitas e despesas
+- 📊 **Relatórios Visuais** - Gráficos e análises detalhadas
+- 👤 **Carteiras Individuais** - Controle por membro da família
+- 🛒 **Lista de Compras** - Colaborativa e sincronizada
+- ✅ **Gerenciador de Tarefas** - Organização familiar
+- 🏠 **Controle IoT** - Integração com dispositivos inteligentes
+- 🎨 **Design Retrô** - Interface nostálgica e moderna
 
-## Tecnologias Utilizadas
+## 🐳 Docker Setup
 
-*   **Frontend:** Next.js (App Router) com React e TypeScript
-*   **Estilização:** Tailwind CSS com componentes shadcn/ui
-*   **Backend (Mock):** Dados fictícios para simular o fluxo completo
-*   **PWA:** Configurado para instalação e navegação fluida em dispositivos móveis
-*   **Banco de Dados (Backend):** PostgreSQL com Prisma ORM
-*   **Orquestração:** Docker Swarm com Traefik
+### Desenvolvimento
 
-## Estrutura do Projeto
+\`\`\`bash
+# Clonar o repositório
+git clone <repository-url>
+cd minha-grana-pwa
 
-\`\`\`
-.
-├── app/
-│   ├── api/                  # Rotas da API (backend)
-│   │   ├── dispositivos/
-│   │   │   └── route.ts      # API para gerenciar dispositivos IoT
-│   │   └── logs/
-│   │       └── route.ts      # API para registrar logs de dispositivos
-│   ├── components/           # Componentes React reutilizáveis
-│   │   ├── dashboard.tsx
-│   │   ├── expense-form.tsx
-│   │   ├── expenses-list.tsx
-│   │   ├── family-settings.tsx
-│   │   ├── family-setup.tsx
-│   │   ├── iot-control.tsx   # Componente para controle de dispositivos IoT
-│   │   ├── login-screen.tsx
-│   │   ├── member-wallet.tsx
-│   │   ├── reports.tsx
-│   │   ├── shopping-list.tsx
-│   │   └── tasks-list.tsx
-│   ├── iot-control/          # Página para o módulo IoT
-│   │   └── page.tsx
-│   ├── globals.css           # Estilos globais
-│   ├── layout.tsx            # Layout principal da aplicação
-│   ├── manifest.json         # Manifest do PWA
-│   └── page.tsx              # Página inicial (controle de fluxo de telas)
-├── components/ui/            # Componentes Shadcn UI (gerados)
-├── hooks/                    # Hooks personalizados
-├── lib/                      # Funções utilitárias e configurações
-│   ├── prisma.ts             # Configuração do Prisma Client
-│   └── validation.ts         # Esquemas de validação com Zod
-├── prisma/                   # Configuração do Prisma ORM
-│   └── schema.prisma         # Esquema do banco de dados
-├── public/                   # Ativos estáticos (imagens, ícones)
-├── styles/                   # Estilos adicionais
-├── .env.production           # Variáveis de ambiente para produção
-├── Dockerfile                # Configuração para build da imagem Docker
-├── docker-stack.yaml         # Configuração para deploy com Docker Swarm e Traefik
-├── next.config.mjs
-├── package.json
-├── pnpm-lock.yaml
-├── postcss.config.mjs
-├── tailwind.config.ts
-└── tsconfig.json
+# Configurar ambiente
+chmod +x scripts/setup.sh
+./scripts/setup.sh
+
+# Ou manualmente:
+cp .env.example .env
+docker-compose up --build
 \`\`\`
 
-## Fluxo do Usuário (Frontend)
+### Produção
 
-1.  **Início:** Nome do app, logo, slogan. Botões: `[Entrar]` e `[Criar conta]`.
-2.  **Login/Cadastro:** Campos: e-mail, senha. Ações: Entrar, Criar conta, Esqueci a senha.
-3.  **Criar ou Entrar em Família:**
-    *   Criar nova família: nome, e-mail (admin).
-    *   Entrar em família existente: inserir código de convite.
-4.  **Dashboard da Família:** Visão geral: saldo total, gasto do mês, gráfico por categoria. Ações rápidas: `[Criar Despesa]`, `[Ver Despesas]`, `[Ver Relatórios]`.
-5.  **Criar Nova Despesa:** Campos: valor, data, categoria, membro, dividir com (igual, percentual, valor), observações. Botão: `[Salvar]`.
-6.  **Ver Despesas:** Filtros: membro, categoria, período. Lista com edição/exclusão.
-7.  **Ver Relatórios:** Gráficos: por membro, por categoria, por mês. Exportação em PDF ou Excel.
-8.  **Carteira do Membro:** Saldo individual, histórico pessoal de despesas, **cadastro de saldo**, **despesas recorrentes** (dia, mês, ano).
-9.  **Lista de Tarefas:** Gerenciamento de tarefas com responsável, data limite, prioridade e status.
-10. **Lista de Compras:** Gerenciamento de itens de compra com quantidade, preço estimado e status de compra.
-11. **Controle IoT:** Módulo para listar e controlar dispositivos inteligentes (ligar/desligar).
-12. **Configurações:** Nome da família, membros, preferências (idioma/moeda).
-13. **Perfil do Usuário:** Nome, e-mail, papel, botão para editar ou excluir.
+\`\`\`bash
+# Configurar variáveis de produção
+cp .env.example .env.production
+# Editar .env.production com valores reais
 
-## Backend (API RESTful)
+# Deploy
+chmod +x scripts/deploy.sh
+./scripts/deploy.sh
 
-O backend é uma API RESTful desenvolvida com Next.js API Routes, Prisma ORM e PostgreSQL.
+# Ou manualmente:
+docker-compose -f docker-compose.prod.yml up --build -d
+\`\`\`
 
-### Rotas da API
+## 📋 Comandos Úteis
 
-*   `POST /api/dispositivos`: Cadastra um novo dispositivo ou atualiza um existente (`id_dispositivo` é a chave única).
-*   `GET /api/dispositivos`: Lista todos os dispositivos registrados.
-*   `DELETE /api/dispositivos/{id_dispositivo}`: Exclui um dispositivo pelo seu `id_dispositivo`.
-*   `POST /api/logs`: Registra logs de uso para um dispositivo específico.
+\`\`\`bash
+# Desenvolvimento
+npm run docker:dev      # Iniciar em modo desenvolvimento
+npm run docker:prod     # Iniciar em modo produção
+npm run docker:down     # Parar containers
+npm run docker:clean    # Limpar tudo (containers, volumes, imagens)
 
-### Modelo de Dados (Prisma)
+# Banco de dados
+docker-compose exec app npx prisma migrate dev
+docker-compose exec app npx prisma generate
+docker-compose exec app npx prisma studio
 
-*   **`Dispositivo`**: Representa um dispositivo IoT conectado.
-    *   `id` (UUID)
-    *   `id_dispositivo` (String, único) - ID do dispositivo físico (ex: MAC, ID customizado)
-    *   `versao` (String)
-    *   `nome` (String)
-    *   `sobrenome` (String)
-    *   `telefone` (String)
-    *   `email` (String)
-    *   `ip` (String)
-    *   `mac` (String)
-    *   `wifi_rssi` (Int)
-    *   `origem` (String) - Ex: "tseca"
-    *   `status` (String) - "on" ou "off"
-    *   `type` (String) - "light", "thermostat", "speaker", "other"
-    *   `room` (String) - Cômodo onde está
-    *   `createdAt` (DateTime)
-    *   `updatedAt` (DateTime)
-*   **`Log`**: Registra eventos e mensagens dos dispositivos.
-    *   `id` (UUID)
-    *   `id_dispositivo` (String) - Chave estrangeira para `Dispositivo`
-    *   `mensagem` (String)
-    *   `timestamp` (DateTime) - Timestamp do evento no dispositivo
-    *   `createdAt` (DateTime) - Timestamp de registro no banco
+# Logs
+docker-compose logs -f app      # Logs da aplicação
+docker-compose logs -f postgres # Logs do banco
+\`\`\`
 
-### Validação
+## 🌐 Acessos
 
-*   Utiliza `Zod` para validação de esquemas de entrada nas rotas da API, garantindo a integridade dos dados.
+- **Aplicação**: http://localhost:3000
+- **Adminer** (DB Manager): http://localhost:8080
+- **Prisma Studio**: http://localhost:5555
 
-### CORS
+### Credenciais do Banco (desenvolvimento)
+- **Host**: localhost:5432
+- **Database**: minhagrana
+- **Username**: postgres
+- **Password**: minhagrana123
 
-*   Configurado para permitir requisições do domínio `https://despesas.seulimacasafacil.com.br` via variável de ambiente `CORS_ORIGIN`.
+## 🏗️ Arquitetura
 
-## Configuração de Ambiente
+\`\`\`
+minha-grana-pwa/
+├── app/                    # Next.js App Router
+│   ├── api/               # API Routes
+│   ├── components/        # Componentes React
+│   └── globals.css        # Estilos globais
+├── components/            # Componentes UI (shadcn/ui)
+├── lib/                   # Utilitários e configurações
+├── prisma/               # Schema e migrações do banco
+├── public/               # Arquivos estáticos
+├── scripts/              # Scripts de automação
+├── docker-compose.yml    # Configuração Docker (dev)
+├── docker-compose.prod.yml # Configuração Docker (prod)
+├── Dockerfile            # Multi-stage build
+└── nginx.conf            # Configuração Nginx (prod)
+\`\`\`
 
-Crie um arquivo `.env.production` na raiz do projeto com as seguintes variáveis:
+## 🔧 Configuração
 
-```dotenv
-DATABASE_URL="postgresql://postgres:TxFEUjXbqEfbaawTVmdE@postgresql:5432/minhagrana?schema=public"
-CORS_ORIGIN="https://despesas.seulimacasafacil.com.br"
-PORT=3000
+### Variáveis de Ambiente
+
+\`\`\`env
+# Database
+DATABASE_URL="postgresql://postgres:password@localhost:5432/minhagrana"
+
+# Next.js
+NEXT_PUBLIC_API_BASE_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-secret-key"
+NEXTAUTH_URL="http://localhost:3000"
+\`\`\`
+
+### Banco de Dados
+
+O projeto usa PostgreSQL com Prisma ORM. As migrações são executadas automaticamente no primeiro build.
+
+### PWA
+
+A aplicação é configurada como PWA com:
+- Service Worker para cache offline
+- Manifest para instalação
+- Ícones otimizados para diferentes dispositivos
+
+## 🚀 Deploy
+
+### Docker Swarm (Produção)
+
+\`\`\`bash
+# Inicializar swarm
+docker swarm init
+
+# Deploy do stack
+docker stack deploy -c docker-compose.prod.yml minhagrana
+
+# Verificar serviços
+docker service ls
+\`\`\`
+
+### Variáveis de Produção
+
+\`\`\`env
+POSTGRES_PASSWORD="secure-password"
+NEXT_PUBLIC_API_BASE_URL="https://yourdomain.com"
+NEXTAUTH_SECRET="production-secret-key"
+NEXTAUTH_URL="https://yourdomain.com"
+\`\`\`
+
+## 🛠️ Desenvolvimento
+
+### Estrutura do Projeto
+
+- **Frontend**: Next.js 14 com App Router
+- **Backend**: API Routes do Next.js
+- **Database**: PostgreSQL com Prisma
+- **UI**: shadcn/ui + Tailwind CSS
+- **Charts**: Recharts
+- **Forms**: React Hook Form + Zod
+
+### Adicionando Novas Funcionalidades
+
+1. Criar componente em `app/components/`
+2. Adicionar rota de API em `app/api/`
+3. Atualizar schema do Prisma se necessário
+4. Executar migrações
+
+## 📱 PWA Features
+
+- ✅ Offline First
+- ✅ Installable
+- ✅ Responsive Design
+- ✅ Push Notifications (futuro)
+- ✅ Background Sync (futuro)
+
+## 🤝 Contribuição
+
+1. Fork o projeto
+2. Crie uma branch para sua feature
+3. Commit suas mudanças
+4. Push para a branch
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.

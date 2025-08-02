@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # Aplicação Next.js
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:minhagrana123@postgres:5432/minhagrana?schema=public
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=dev-secret-key-change-in-production
+      - NEXTAUTH_URL=http://localhost:3000
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - minhagrana-network
+    command: npm run dev
+
+  # Banco de dados PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: minhagrana
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: minhagrana123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./prisma/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d minhagrana"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - minhagrana-network
+
+  # Adminer para gerenciar o banco (opcional)
+  adminer:
+    image: adminer:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      - postgres
+    networks:
+      - minhagrana-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  minhagrana-network:
+    driver: bridge
