@@ -1,309 +1,243 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import {
   DollarSign,
+  Users,
+  ShoppingCart,
+  CheckSquare,
   TrendingUp,
   TrendingDown,
-  Users,
-  CheckSquare,
-  ShoppingCart,
-  Calendar,
-  Target,
   Wallet,
   PiggyBank,
+  Target,
+  Calendar,
 } from "lucide-react"
 
 interface DashboardProps {
-  user: any
+  familyData?: {
+    name: string
+    members: number
+    totalBalance: number
+    monthlyGoal: number
+    currentExpenses: number
+  }
 }
 
-export function Dashboard({ user }: DashboardProps) {
-  const [stats, setStats] = useState({
-    totalBalance: 2450.75,
-    monthlyIncome: 5200.0,
-    monthlyExpenses: 3850.25,
-    savingsGoal: 10000.0,
-    currentSavings: 6750.5,
-    pendingTasks: 8,
-    shoppingItems: 12,
-    familyMembers: 4,
-  })
+export function Dashboard({ familyData }: DashboardProps) {
+  const [selectedPeriod, setSelectedPeriod] = useState("month")
 
-  const [recentTransactions, setRecentTransactions] = useState([
+  const defaultData = {
+    name: "Família Silva",
+    members: 4,
+    totalBalance: 2500.0,
+    monthlyGoal: 3000.0,
+    currentExpenses: 1850.0,
+  }
+
+  const data = familyData || defaultData
+  const goalProgress = (data.currentExpenses / data.monthlyGoal) * 100
+  const remainingBudget = data.monthlyGoal - data.currentExpenses
+
+  const quickStats = [
     {
-      id: "1",
-      description: "Supermercado Extra",
-      amount: -245.8,
-      category: "Alimentação",
-      date: new Date("2024-01-15"),
-      member: "Maria Silva",
+      title: "Saldo Total",
+      value: `R$ ${data.totalBalance.toFixed(2)}`,
+      icon: Wallet,
+      trend: "+12%",
+      trendUp: true,
     },
     {
-      id: "2",
-      description: "Salário Janeiro",
-      amount: 5200.0,
-      category: "Renda",
-      date: new Date("2024-01-01"),
-      member: "João Silva",
+      title: "Gastos do Mês",
+      value: `R$ ${data.currentExpenses.toFixed(2)}`,
+      icon: TrendingDown,
+      trend: "-5%",
+      trendUp: false,
     },
     {
-      id: "3",
-      description: "Conta de Luz",
-      amount: -180.45,
-      category: "Utilidades",
-      date: new Date("2024-01-10"),
-      member: "Maria Silva",
+      title: "Meta Mensal",
+      value: `R$ ${data.monthlyGoal.toFixed(2)}`,
+      icon: Target,
+      trend: `${goalProgress.toFixed(0)}%`,
+      trendUp: goalProgress < 80,
     },
     {
-      id: "4",
-      description: "Farmácia",
-      amount: -67.9,
-      category: "Saúde",
-      date: new Date("2024-01-12"),
-      member: "Ana Silva",
+      title: "Membros Ativos",
+      value: data.members.toString(),
+      icon: Users,
+      trend: "+1",
+      trendUp: true,
     },
-  ])
+  ]
 
-  const [quickActions] = useState([
-    { id: "add-expense", label: "Adicionar Gasto", icon: TrendingDown, color: "red" },
-    { id: "add-income", label: "Adicionar Renda", icon: TrendingUp, color: "green" },
-    { id: "add-task", label: "Nova Tarefa", icon: CheckSquare, color: "blue" },
-    { id: "add-shopping", label: "Lista Compras", icon: ShoppingCart, color: "purple" },
-  ])
-
-  // Calcular progresso da meta de economia
-  const savingsProgress = (stats.currentSavings / stats.savingsGoal) * 100
-
-  // Calcular saldo mensal
-  const monthlyBalance = stats.monthlyIncome - stats.monthlyExpenses
+  const recentActivities = [
+    { type: "expense", description: "Supermercado Extra", amount: -125.5, member: "Maria", time: "2h atrás" },
+    { type: "income", description: "Mesada João", amount: +50.0, member: "João", time: "1 dia atrás" },
+    { type: "expense", description: "Farmácia", amount: -35.8, member: "Carlos", time: "2 dias atrás" },
+    { type: "task", description: "Tarefa concluída: Lavar louça", amount: +10.0, member: "Ana", time: "3 dias atrás" },
+  ]
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl p-6 text-white">
-        <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 p-4">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-bold mb-2">Olá, {user?.name?.split(" ")[0] || "Usuário"}! 👋</h2>
-            <p className="text-orange-100">Aqui está um resumo das suas finanças familiares</p>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+              Olá, {data.name}! 👋
+            </h1>
+            <p className="text-gray-600 mt-1">Aqui está o resumo das suas finanças familiares</p>
           </div>
-          <div className="hidden md:block">
-            <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center">
-              <PiggyBank className="w-10 h-10" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Saldo Total */}
-        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-800">Saldo Total</CardTitle>
-            <Wallet className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-900">
-              R$ {stats.totalBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-            </div>
-            <p className="text-xs text-green-600 mt-1">+12% em relação ao mês passado</p>
-          </CardContent>
-        </Card>
-
-        {/* Renda Mensal */}
-        <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-800">Renda Mensal</CardTitle>
-            <TrendingUp className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-900">
-              R$ {stats.monthlyIncome.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-            </div>
-            <p className="text-xs text-blue-600 mt-1">Estável este mês</p>
-          </CardContent>
-        </Card>
-
-        {/* Gastos Mensais */}
-        <Card className="bg-gradient-to-br from-red-50 to-pink-50 border-red-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-red-800">Gastos Mensais</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-900">
-              R$ {stats.monthlyExpenses.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-            </div>
-            <p className="text-xs text-red-600 mt-1">-5% em relação ao mês passado</p>
-          </CardContent>
-        </Card>
-
-        {/* Membros da Família */}
-        <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-purple-800">Família</CardTitle>
-            <Users className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-900">{stats.familyMembers} membros</div>
-            <p className="text-xs text-purple-600 mt-1">Todos ativos</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Target className="w-5 h-5 text-orange-600" />
-            <span>Ações Rápidas</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {quickActions.map((action) => {
-              const Icon = action.icon
-              return (
-                <Button
-                  key={action.id}
-                  variant="outline"
-                  className={`h-auto py-4 flex flex-col items-center space-y-2 hover:bg-${action.color}-50 border-${action.color}-200`}
-                >
-                  <Icon className={`w-6 h-6 text-${action.color}-600`} />
-                  <span className="text-sm text-center">{action.label}</span>
-                </Button>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Meta de Economia */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <PiggyBank className="w-5 h-5 text-orange-600" />
-              <span>Meta de Economia</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Progresso</span>
-              <span className="text-sm font-medium">{savingsProgress.toFixed(1)}%</span>
-            </div>
-            <Progress value={savingsProgress} className="h-3" />
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">
-                R$ {stats.currentSavings.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-              </span>
-              <span className="font-medium">
-                R$ {stats.savingsGoal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-            <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-4 rounded-lg">
-              <p className="text-sm text-orange-800">
-                <strong>Faltam:</strong> R${" "}
-                {(stats.savingsGoal - stats.currentSavings).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} para
-                atingir sua meta!
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Resumo do Mês */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Calendar className="w-5 h-5 text-orange-600" />
-              <span>Resumo do Mês</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-              <div>
-                <p className="text-sm text-green-800 font-medium">Saldo Mensal</p>
-                <p className="text-xs text-green-600">Renda - Gastos</p>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-green-900">
-                  R$ {monthlyBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-3 bg-orange-50 rounded-lg">
-                <CheckSquare className="w-6 h-6 text-orange-600 mx-auto mb-2" />
-                <p className="text-sm font-medium">{stats.pendingTasks}</p>
-                <p className="text-xs text-gray-600">Tarefas Pendentes</p>
-              </div>
-              <div className="text-center p-3 bg-purple-50 rounded-lg">
-                <ShoppingCart className="w-6 h-6 text-purple-600 mx-auto mb-2" />
-                <p className="text-sm font-medium">{stats.shoppingItems}</p>
-                <p className="text-xs text-gray-600">Itens na Lista</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Transactions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <DollarSign className="w-5 h-5 text-orange-600" />
-              <span>Transações Recentes</span>
-            </div>
-            <Button variant="outline" size="sm">
-              Ver Todas
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {recentTransactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          <div className="flex gap-2">
+            {["week", "month", "year"].map((period) => (
+              <Button
+                key={period}
+                variant={selectedPeriod === period ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedPeriod(period)}
+                className="capitalize"
               >
-                <div className="flex items-center space-x-3">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      transaction.amount > 0 ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
-                    }`}
-                  >
-                    {transaction.amount > 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-                  </div>
-                  <div>
-                    <p className="font-medium">{transaction.description}</p>
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
-                      <Badge variant="secondary" className="text-xs">
-                        {transaction.category}
-                      </Badge>
-                      <span>•</span>
-                      <span>{transaction.member}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className={`font-bold ${transaction.amount > 0 ? "text-green-600" : "text-red-600"}`}>
-                    {transaction.amount > 0 ? "+" : ""}R${" "}
-                    {Math.abs(transaction.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-xs text-gray-500">{transaction.date.toLocaleDateString("pt-BR")}</p>
-                </div>
-              </div>
+                {period === "week" ? "Semana" : period === "month" ? "Mês" : "Ano"}
+              </Button>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {quickStats.map((stat, index) => (
+            <Card
+              key={index}
+              className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">{stat.title}</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <div className={`p-2 rounded-full ${stat.trendUp ? "bg-green-100" : "bg-red-100"}`}>
+                      <stat.icon className={`h-5 w-5 ${stat.trendUp ? "text-green-600" : "text-red-600"}`} />
+                    </div>
+                    <span className={`text-xs font-medium mt-2 ${stat.trendUp ? "text-green-600" : "text-red-600"}`}>
+                      {stat.trend}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Budget Progress */}
+        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PiggyBank className="h-5 w-5 text-orange-600" />
+              Progresso da Meta Mensal
+            </CardTitle>
+            <CardDescription>
+              Você gastou R$ {data.currentExpenses.toFixed(2)} de R$ {data.monthlyGoal.toFixed(2)}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <Progress value={goalProgress} className="h-3" />
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">{goalProgress.toFixed(1)}% da meta utilizada</span>
+                <span className={`font-medium ${remainingBudget > 0 ? "text-green-600" : "text-red-600"}`}>
+                  {remainingBudget > 0
+                    ? `R$ ${remainingBudget.toFixed(2)} restantes`
+                    : `R$ ${Math.abs(remainingBudget).toFixed(2)} acima da meta`}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Activities */}
+        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-orange-600" />
+              Atividades Recentes
+            </CardTitle>
+            <CardDescription>Últimas movimentações da família</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentActivities.map((activity, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2 rounded-full ${
+                        activity.type === "income"
+                          ? "bg-green-100"
+                          : activity.type === "expense"
+                            ? "bg-red-100"
+                            : "bg-blue-100"
+                      }`}
+                    >
+                      {activity.type === "income" ? (
+                        <TrendingUp className="h-4 w-4 text-green-600" />
+                      ) : activity.type === "expense" ? (
+                        <TrendingDown className="h-4 w-4 text-red-600" />
+                      ) : (
+                        <CheckSquare className="h-4 w-4 text-blue-600" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{activity.description}</p>
+                      <p className="text-sm text-gray-600">
+                        {activity.member} • {activity.time}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-bold ${activity.amount > 0 ? "text-green-600" : "text-red-600"}`}>
+                      {activity.amount > 0 ? "+" : ""}R$ {Math.abs(activity.amount).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-gradient-to-br from-orange-500 to-red-500 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
+            <CardContent className="p-6 text-center">
+              <DollarSign className="h-8 w-8 mx-auto mb-3" />
+              <h3 className="font-bold text-lg mb-2">Adicionar Gasto</h3>
+              <p className="text-orange-100 text-sm">Registre uma nova despesa</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-green-500 to-emerald-500 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
+            <CardContent className="p-6 text-center">
+              <ShoppingCart className="h-8 w-8 mx-auto mb-3" />
+              <h3 className="font-bold text-lg mb-2">Lista de Compras</h3>
+              <p className="text-green-100 text-sm">Gerencie suas compras</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-blue-500 to-purple-500 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
+            <CardContent className="p-6 text-center">
+              <CheckSquare className="h-8 w-8 mx-auto mb-3" />
+              <h3 className="font-bold text-lg mb-2">Tarefas</h3>
+              <p className="text-blue-100 text-sm">Organize as atividades</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }
