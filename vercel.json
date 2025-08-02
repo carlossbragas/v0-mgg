@@ -1,24 +1,15 @@
 {
-  "version": 2,
+  "functions": {
+    "app/api/**/*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "regions": ["gru1"],
   "framework": "nextjs",
   "buildCommand": "npm run build",
+  "outputDirectory": ".next",
   "installCommand": "npm install",
-  "functions": {
-    "app/api/**/*.ts": {
-      "maxDuration": 30
-    }
-  },
-  "routes": [
-    {
-      "src": "/sw.js",
-      "dest": "/api/sw"
-    },
-    {
-      "src": "/manifest.json",
-      "dest": "/app/manifest.json"
-    }
-  ],
+  "devCommand": "npm run dev",
   "headers": [
     {
       "source": "/sw.js",
@@ -39,13 +30,35 @@
         {
           "key": "Content-Type",
           "value": "application/manifest+json"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "origin-when-cross-origin"
         }
       ]
     }
   ],
-  "env": {
-    "NEXTAUTH_URL": "@nextauth_url",
-    "DATABASE_URL": "@database_url",
-    "DIRECT_URL": "@direct_url"
-  }
+  "rewrites": [
+    {
+      "source": "/sw.js",
+      "destination": "/api/sw"
+    }
+  ]
 }

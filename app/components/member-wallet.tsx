@@ -1,120 +1,145 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Wallet, TrendingUp, TrendingDown, Plus } from "lucide-react"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { toast } from "sonner"
-
-interface User {
-  id: string
-  name: string
-  email: string
-  role: "admin" | "member"
-  familyId?: string
-}
-
-interface Family {
-  id: string
-  name: string
-  adminId: string
-  members: User[]
-}
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Wallet, Plus, TrendingUp, TrendingDown, Filter, Download, Eye, EyeOff, PiggyBank, Target } from "lucide-react"
 
 interface Transaction {
   id: string
-  type: "income" | "expense" | "transfer"
+  type: "income" | "expense"
   amount: number
   description: string
-  date: string
-  memberId: string
-  fromMemberId?: string
-  toMemberId?: string
+  date: Date
+  category: string
+  status: "completed" | "pending"
+}
+
+interface Goal {
+  id: string
+  name: string
+  target: number
+  current: number
+  deadline: Date
 }
 
 interface MemberWalletProps {
-  user: User
-  family: Family | null
+  user: any
 }
 
-export function MemberWallet({ user, family }: MemberWalletProps) {
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [showAddTransaction, setShowAddTransaction] = useState(false)
-  const [transactionType, setTransactionType] = useState<"income" | "expense">("income")
-  const [formData, setFormData] = useState({
+export function MemberWallet({ user }: MemberWalletProps) {
+  const [balance, setBalance] = useState(1250.75)
+  const [showBalance, setShowBalance] = useState(true)
+  const [isAddingTransaction, setIsAddingTransaction] = useState(false)
+
+  const [newTransaction, setNewTransaction] = useState({
+    type: "expense",
     amount: "",
     description: "",
+    category: "",
     date: new Date().toISOString().split("T")[0],
   })
 
-  useEffect(() => {
-    // Carregar transações do localStorage
-    const savedTransactions = JSON.parse(localStorage.getItem("wallet-transactions") || "[]")
-    setTransactions(savedTransactions)
-  }, [])
+  const [transactions, setTransactions] = useState<Transaction[]>([
+    {
+      id: "1",
+      type: "expense",
+      amount: -45.5,
+      description: "Lanche na escola",
+      category: "Alimentação",
+      date: new Date("2024-01-15"),
+      status: "completed",
+    },
+    {
+      id: "2",
+      type: "income",
+      amount: 50.0,
+      description: "Mesada semanal",
+      category: "Mesada",
+      date: new Date("2024-01-14"),
+      status: "completed",
+    },
+    {
+      id: "3",
+      type: "expense",
+      amount: -12.0,
+      description: "Transporte",
+      category: "Transporte",
+      date: new Date("2024-01-13"),
+      status: "completed",
+    },
+    {
+      id: "4",
+      type: "expense",
+      amount: -25.3,
+      description: "Material escolar",
+      category: "Educação",
+      date: new Date("2024-01-12"),
+      status: "pending",
+    },
+  ])
 
-  const getMemberTransactions = (memberId: string) => {
-    return transactions.filter(
-      (t) => t.memberId === memberId || t.fromMemberId === memberId || t.toMemberId === memberId,
-    )
-  }
+  const [goals, setGoals] = useState<Goal[]>([
+    {
+      id: "1",
+      name: "Novo Videogame",
+      target: 500.0,
+      current: 180.0,
+      deadline: new Date("2024-06-01"),
+    },
+    {
+      id: "2",
+      name: "Viagem de Férias",
+      target: 300.0,
+      current: 75.0,
+      deadline: new Date("2024-12-01"),
+    },
+  ])
 
-  const getMemberBalance = (memberId: string) => {
-    const memberTransactions = getMemberTransactions(memberId)
-    return memberTransactions.reduce((balance, transaction) => {
-      if (transaction.type === "income") {
-        return balance + transaction.amount
-      } else if (transaction.type === "expense") {
-        return balance - transaction.amount
-      } else if (transaction.type === "transfer") {
-        if (transaction.fromMemberId === memberId) {
-          return balance - transaction.amount
-        } else if (transaction.toMemberId === memberId) {
-          return balance + transaction.amount
-        }
-      }
-      return balance
-    }, 0)
-  }
+  const categories = [
+    "Alimentação",
+    "Transporte",
+    "Educação",
+    "Entretenimento",
+    "Roupas",
+    "Saúde",
+    "Mesada",
+    "Presente",
+    "Outros",
+  ]
 
-  const handleAddTransaction = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleAddTransaction = () => {
+    if (!newTransaction.amount || !newTransaction.description) return
 
-    if (!formData.amount || !formData.description) {
-      toast.error("Preencha todos os campos obrigatórios")
-      return
-    }
-
-    const newTransaction: Transaction = {
+    const transaction = {
       id: Date.now().toString(),
-      type: transactionType,
-      amount: Number.parseFloat(formData.amount),
-      description: formData.description,
-      date: formData.date,
-      memberId: user.id,
+      type: newTransaction.type,
+      amount:
+        newTransaction.type === "expense"
+          ? -Number.parseFloat(newTransaction.amount)
+          : Number.parseFloat(newTransaction.amount),
+      description: newTransaction.description,
+      category: newTransaction.category,
+      date: new Date(newTransaction.date),
+      status: "pending",
     }
 
-    const updatedTransactions = [newTransaction, ...transactions]
-    setTransactions(updatedTransactions)
-    localStorage.setItem("wallet-transactions", JSON.stringify(updatedTransactions))
-
-    toast.success(`${transactionType === "income" ? "Receita" : "Gasto"} adicionado com sucesso!`)
-    setShowAddTransaction(false)
-    setFormData({ amount: "", description: "", date: new Date().toISOString().split("T")[0] })
+    setTransactions([transaction, ...transactions])
+    setBalance(balance + transaction.amount)
+    setNewTransaction({
+      type: "expense",
+      amount: "",
+      description: "",
+      category: "",
+      date: new Date().toISOString().split("T")[0],
+    })
+    setIsAddingTransaction(false)
   }
 
   const formatCurrency = (amount: number) => {
@@ -124,230 +149,285 @@ export function MemberWallet({ user, family }: MemberWalletProps) {
     })
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("pt-BR")
+  const getTransactionIcon = (type: string) => {
+    return type === "income" ? (
+      <TrendingUp className="w-4 h-4 text-green-600" />
+    ) : (
+      <TrendingDown className="w-4 h-4 text-red-600" />
+    )
   }
 
-  const userBalance = getMemberBalance(user.id)
-  const userTransactions = getMemberTransactions(user.id).slice(0, 10)
+  const getStatusBadge = (status: string) => {
+    return status === "completed" ? (
+      <Badge variant="default" className="bg-green-100 text-green-800">
+        Concluído
+      </Badge>
+    ) : (
+      <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+        Pendente
+      </Badge>
+    )
+  }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header da Carteira */}
-      <Card className="retro-shadow">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="text-center">
+        <h2 className="text-3xl font-bold text-amber-800 mb-2">Minha Carteira</h2>
+        <p className="text-amber-600">Gerencie seus gastos e economias pessoais</p>
+      </div>
+
+      {/* Balance Card */}
+      <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50">
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-12 w-12 sm:h-16 sm:w-16">
-                <AvatarFallback className="bg-retro-orange text-white text-lg sm:text-xl font-bold">
-                  {user.name.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <CardTitle className="text-lg sm:text-xl">Minha Carteira</CardTitle>
-                <CardDescription className="text-sm">{user.name}</CardDescription>
-              </div>
-            </div>
-            <Dialog open={showAddTransaction} onOpenChange={setShowAddTransaction}>
-              <DialogTrigger asChild>
-                <Button className="bg-retro-green hover:bg-retro-green/90 w-full sm:w-auto">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Transação
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md mx-4">
-                <DialogHeader>
-                  <DialogTitle>Nova Transação</DialogTitle>
-                  <DialogDescription>Adicione uma receita ou gasto à sua carteira</DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleAddTransaction} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      variant={transactionType === "income" ? "default" : "outline"}
-                      onClick={() => setTransactionType("income")}
-                      className="h-11"
-                    >
-                      <TrendingUp className="h-4 w-4 mr-2" />
-                      Receita
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={transactionType === "expense" ? "default" : "outline"}
-                      onClick={() => setTransactionType("expense")}
-                      className="h-11"
-                    >
-                      <TrendingDown className="h-4 w-4 mr-2" />
-                      Gasto
-                    </Button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="amount">Valor *</Label>
-                    <Input
-                      id="amount"
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
-                      value={formData.amount}
-                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                      required
-                      className="h-11"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Descrição *</Label>
-                    <Input
-                      id="description"
-                      placeholder="Ex: Salário, Compras..."
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      required
-                      className="h-11"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="date">Data</Label>
-                    <Input
-                      id="date"
-                      type="date"
-                      value={formData.date}
-                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                      className="h-11"
-                    />
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setShowAddTransaction(false)}
-                      className="flex-1 h-11 order-2 sm:order-1"
-                    >
-                      Cancelar
-                    </Button>
-                    <Button
-                      type="submit"
-                      className="flex-1 h-11 bg-retro-green hover:bg-retro-green/90 order-1 sm:order-2"
-                    >
-                      Salvar
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardHeader>
-      </Card>
-
-      {/* Saldo Atual */}
-      <Card className="retro-shadow">
-        <CardContent className="p-6">
-          <div className="text-center">
-            <div className="flex items-center justify-center mb-4">
-              <Wallet className="h-8 w-8 text-retro-blue" />
-            </div>
-            <h3 className="text-lg font-medium text-muted-foreground mb-2">Saldo Atual</h3>
-            <div
-              className={`text-3xl sm:text-4xl font-bold ${userBalance >= 0 ? "text-retro-green" : "text-retro-orange"}`}
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center space-x-2">
+              <Wallet className="w-6 h-6 text-amber-600" />
+              <span className="text-amber-800">Saldo Atual</span>
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowBalance(!showBalance)}
+              className="text-amber-600 hover:text-amber-700"
             >
-              {formatCurrency(userBalance)}
-            </div>
+              {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Resumo dos Membros da Família */}
-      {family && family.members.length > 1 && (
-        <Card className="retro-shadow">
-          <CardHeader>
-            <CardTitle className="text-lg sm:text-xl">Saldos da Família</CardTitle>
-            <CardDescription className="text-sm">Visão geral dos saldos de todos os membros</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {family.members.map((member) => {
-                const memberBalance = getMemberBalance(member.id)
-                return (
-                  <div key={member.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-retro-purple text-white text-sm">
-                          {member.name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium text-sm">{member.name}</p>
-                        {member.id === user.id && (
-                          <Badge variant="secondary" className="text-xs">
-                            Você
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <span
-                      className={`font-bold text-sm sm:text-base ${memberBalance >= 0 ? "text-retro-green" : "text-retro-orange"}`}
-                    >
-                      {formatCurrency(memberBalance)}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Histórico de Transações */}
-      <Card className="retro-shadow">
-        <CardHeader>
-          <CardTitle className="text-lg sm:text-xl">Histórico de Transações</CardTitle>
-          <CardDescription className="text-sm">Suas últimas movimentações financeiras</CardDescription>
         </CardHeader>
         <CardContent>
-          {userTransactions.length > 0 ? (
-            <div className="space-y-3">
-              {userTransactions.map((transaction) => (
-                <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2 rounded-full ${
-                        transaction.type === "income" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
-                      }`}
-                    >
-                      {transaction.type === "income" ? (
-                        <TrendingUp className="h-4 w-4" />
-                      ) : (
-                        <TrendingDown className="h-4 w-4" />
-                      )}
+          <div className="text-center">
+            <div className="text-4xl font-bold text-amber-800 mb-2">
+              {showBalance ? formatCurrency(balance) : "••••••"}
+            </div>
+            <p className="text-sm text-amber-600">Disponível para uso</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mt-6">
+            <Dialog open={isAddingTransaction} onOpenChange={setIsAddingTransaction}>
+              <DialogTrigger asChild>
+                <Button className="bg-green-600 hover:bg-green-700 text-white">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Nova Transação</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Tipo</Label>
+                      <Select
+                        value={newTransaction.type}
+                        onValueChange={(value) => setNewTransaction({ ...newTransaction, type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="income">Receita</SelectItem>
+                          <SelectItem value="expense">Gasto</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">{transaction.description}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(transaction.date)}</p>
+                    <div className="space-y-2">
+                      <Label>Valor</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0,00"
+                        value={newTransaction.amount}
+                        onChange={(e) => setNewTransaction({ ...newTransaction, amount: e.target.value })}
+                      />
                     </div>
                   </div>
-                  <span
-                    className={`font-bold text-sm sm:text-base ${
-                      transaction.type === "income" ? "text-retro-green" : "text-retro-orange"
-                    }`}
-                  >
-                    {transaction.type === "income" ? "+" : "-"}
-                    {formatCurrency(transaction.amount)}
-                  </span>
+
+                  <div className="space-y-2">
+                    <Label>Descrição</Label>
+                    <Input
+                      placeholder="Ex: Lanche na escola"
+                      value={newTransaction.description}
+                      onChange={(e) => setNewTransaction({ ...newTransaction, description: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Categoria</Label>
+                    <Select
+                      value={newTransaction.category}
+                      onValueChange={(value) => setNewTransaction({ ...newTransaction, category: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Data</Label>
+                    <Input
+                      type="date"
+                      value={newTransaction.date}
+                      onChange={(e) => setNewTransaction({ ...newTransaction, date: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="flex space-x-2">
+                    <Button onClick={handleAddTransaction} className="flex-1 bg-amber-600 hover:bg-amber-700">
+                      Adicionar
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsAddingTransaction(false)} className="flex-1">
+                      Cancelar
+                    </Button>
+                  </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="text-4xl mb-4">💳</div>
-              <p className="text-muted-foreground">Nenhuma transação encontrada</p>
-              <p className="text-sm text-muted-foreground mt-2">Comece adicionando sua primeira receita ou gasto!</p>
-            </div>
-          )}
+              </DialogContent>
+            </Dialog>
+
+            <Button variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-100 bg-transparent">
+              <Download className="w-4 h-4 mr-2" />
+              Extrato
+            </Button>
+          </div>
         </CardContent>
       </Card>
+
+      <Tabs defaultValue="transactions" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 bg-amber-100">
+          <TabsTrigger value="transactions" className="data-[state=active]:bg-amber-200">
+            Transações
+          </TabsTrigger>
+          <TabsTrigger value="goals" className="data-[state=active]:bg-amber-200">
+            Metas
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="transactions" className="space-y-4">
+          {/* Filters */}
+          <Card className="border-amber-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-amber-800">Histórico de Transações</h3>
+                <Button variant="outline" size="sm" className="border-amber-300 text-amber-700 bg-transparent">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filtrar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Transactions List */}
+          <div className="space-y-3">
+            {transactions.map((transaction) => (
+              <Card key={transaction.id} className="border-amber-200 bg-gradient-to-r from-white to-amber-50">
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                        {getTransactionIcon(transaction.type)}
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-amber-800">{transaction.description}</h4>
+                        <div className="flex items-center space-x-2 text-sm text-amber-600">
+                          <Badge variant="outline" className="text-xs border-amber-300">
+                            {transaction.category}
+                          </Badge>
+                          <span>•</span>
+                          <span>{transaction.date.toLocaleDateString("pt-BR")}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div
+                        className={`text-lg font-bold ${transaction.amount > 0 ? "text-green-600" : "text-red-600"}`}
+                      >
+                        {transaction.amount > 0 ? "+" : ""}
+                        {formatCurrency(Math.abs(transaction.amount))}
+                      </div>
+                      {getStatusBadge(transaction.status)}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="goals" className="space-y-4">
+          {/* Goals List */}
+          <div className="space-y-4">
+            {goals.map((goal) => {
+              const progress = (goal.current / goal.target) * 100
+              const daysLeft = Math.ceil((goal.deadline.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+
+              return (
+                <Card key={goal.id} className="border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center space-x-2">
+                        <Target className="w-5 h-5 text-amber-600" />
+                        <span className="text-amber-800">{goal.name}</span>
+                      </CardTitle>
+                      <Badge variant="outline" className="border-amber-300 text-amber-700">
+                        {daysLeft} dias restantes
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex justify-between text-sm text-amber-700">
+                      <span>Progresso: {progress.toFixed(1)}%</span>
+                      <span>
+                        {formatCurrency(goal.current)} / {formatCurrency(goal.target)}
+                      </span>
+                    </div>
+                    <div className="w-full bg-amber-200 rounded-full h-3">
+                      <div
+                        className="bg-gradient-to-r from-amber-500 to-orange-500 h-3 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(progress, 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-amber-600">
+                        Faltam: {formatCurrency(goal.target - goal.current)}
+                      </span>
+                      <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
+                        <PiggyBank className="w-4 h-4 mr-2" />
+                        Contribuir
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+
+          {/* Add Goal Button */}
+          <Card className="border-dashed border-2 border-amber-300">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <Target className="w-12 h-12 text-amber-400 mx-auto mb-4" />
+                <h3 className="font-semibold text-amber-800 mb-2">Criar Nova Meta</h3>
+                <p className="text-sm text-amber-600 mb-4">Defina um objetivo de economia e acompanhe seu progresso</p>
+                <Button className="bg-amber-600 hover:bg-amber-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nova Meta
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
+
+export default MemberWallet

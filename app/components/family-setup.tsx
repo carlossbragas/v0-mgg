@@ -3,161 +3,337 @@
 import type React from "react"
 
 import { useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { toast } from "sonner"
-import { Users, Plus, Trash2 } from "lucide-react"
-
-interface User {
-  id: string
-  name: string
-  email: string
-  role: "admin" | "member"
-  familyId?: string
-}
-
-interface Family {
-  id: string
-  name: string
-  adminId: string
-  members: User[]
-}
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Users, Plus, UserPlus, Home, Key, CheckCircle, ArrowRight, GroupIcon as Family } from "lucide-react"
 
 interface FamilySetupProps {
-  user: User
-  onFamilySetup: (family: Family) => void
+  onSetup: (familyData: any) => void
 }
 
-export function FamilySetup({ user, onFamilySetup }: FamilySetupProps) {
-  const [familyName, setFamilyName] = useState("")
-  const [members, setMembers] = useState<{ name: string; email: string }[]>([])
-  const [newMember, setNewMember] = useState({ name: "", email: "" })
+export function FamilySetup({ onSetup }: FamilySetupProps) {
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [step, setStep] = useState(1)
 
-  const addMember = () => {
-    if (newMember.name && newMember.email) {
-      setMembers([...members, newMember])
-      setNewMember({ name: "", email: "" })
-      toast.success("Membro adicionado!")
-    } else {
-      toast.error("Preencha nome e email do membro")
-    }
-  }
+  // Estados para criar família
+  const [createFamilyData, setCreateFamilyData] = useState({
+    familyName: "",
+    description: "",
+  })
 
-  const removeMember = (index: number) => {
-    setMembers(members.filter((_, i) => i !== index))
-    toast.success("Membro removido!")
-  }
+  // Estados para entrar em família
+  const [joinFamilyData, setJoinFamilyData] = useState({
+    familyCode: "",
+  })
 
-  const handleSetupFamily = (e: React.FormEvent) => {
+  // Função para criar família
+  const handleCreateFamily = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsLoading(true)
+    setError("")
 
-    if (!familyName) {
-      toast.error("Digite o nome da família")
-      return
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      if (!createFamilyData.familyName.trim()) {
+        throw new Error("Nome da família é obrigatório")
+      }
+
+      // Gerar código da família
+      const familyCode = Math.random().toString(36).substring(2, 8).toUpperCase()
+
+      const familyData = {
+        id: "family-1",
+        name: createFamilyData.familyName,
+        code: familyCode,
+        description: createFamilyData.description,
+        adminId: "1",
+        members: [
+          {
+            id: "1",
+            name: "João Silva",
+            email: "joao@email.com",
+            role: "admin",
+            balance: 0,
+          },
+        ],
+        createdAt: new Date(),
+      }
+
+      onSetup(familyData)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setIsLoading(false)
     }
+  }
 
-    const familyMembers: User[] = [
-      user,
-      ...members.map((member, index) => ({
-        id: `member-${index + 1}`,
-        name: member.name,
-        email: member.email,
-        role: "member" as const,
-        familyId: "family-1",
-      })),
-    ]
+  // Função para entrar em família
+  const handleJoinFamily = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError("")
 
-    const family: Family = {
-      id: "family-1",
-      name: familyName,
-      adminId: user.id,
-      members: familyMembers,
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      if (!joinFamilyData.familyCode.trim()) {
+        throw new Error("Código da família é obrigatório")
+      }
+
+      // Simular busca da família
+      const familyData = {
+        id: "family-2",
+        name: "Família Silva",
+        code: joinFamilyData.familyCode,
+        description: "Nossa família unida",
+        adminId: "2",
+        members: [
+          {
+            id: "2",
+            name: "Maria Silva",
+            email: "maria@email.com",
+            role: "admin",
+            balance: 1500.0,
+          },
+          {
+            id: "1",
+            name: "João Silva",
+            email: "joao@email.com",
+            role: "member",
+            balance: 0,
+          },
+        ],
+        createdAt: new Date(),
+      }
+
+      onSetup(familyData)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setIsLoading(false)
     }
-
-    toast.success("Família configurada com sucesso!")
-    onFamilySetup(family)
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 retro-gradient">
-      <Card className="w-full max-w-2xl retro-shadow retro-border">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 h-16 w-16 bg-retro-blue rounded-full flex items-center justify-center">
-            <Users className="h-8 w-8 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-2xl">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 bg-gradient-to-br from-orange-400 to-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Family className="w-10 h-10 text-white" />
           </div>
-          <CardTitle className="text-2xl font-bold font-retro">Configurar Família</CardTitle>
-          <CardDescription>Configure sua família para começar a usar o MinhaGrana</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSetupFamily} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="family-name">Nome da Família</Label>
-              <Input
-                id="family-name"
-                placeholder="Ex: Família Silva"
-                value={familyName}
-                onChange={(e) => setFamilyName(e.target.value)}
-                required
-              />
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+            Configurar Família
+          </h1>
+          <p className="text-gray-600 mt-2">Crie uma nova família ou entre em uma existente</p>
+        </div>
+
+        {/* Progress Steps */}
+        <div className="flex items-center justify-center mb-8">
+          <div className="flex items-center space-x-4">
+            <div
+              className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                step >= 1 ? "bg-orange-500 text-white" : "bg-gray-200 text-gray-500"
+              }`}
+            >
+              1
             </div>
+            <div className={`w-12 h-1 ${step >= 2 ? "bg-orange-500" : "bg-gray-200"}`} />
+            <div
+              className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                step >= 2 ? "bg-orange-500 text-white" : "bg-gray-200 text-gray-500"
+              }`}
+            >
+              2
+            </div>
+          </div>
+        </div>
 
-            <div className="space-y-4">
-              <Label>Membros da Família</Label>
+        {step === 1 && (
+          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="text-center">
+              <CardTitle className="text-xl text-gray-800">Como você quer começar?</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="create" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="create" className="flex items-center space-x-2">
+                    <Plus className="w-4 h-4" />
+                    <span>Criar Família</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="join" className="flex items-center space-x-2">
+                    <UserPlus className="w-4 h-4" />
+                    <span>Entrar em Família</span>
+                  </TabsTrigger>
+                </TabsList>
 
-              {/* Admin sempre presente */}
-              <div className="p-3 bg-muted rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{user.name} (Você)</p>
-                    <p className="text-sm text-muted-foreground">{user.email} • Administrador</p>
-                  </div>
-                  <div className="bg-retro-orange text-white px-2 py-1 rounded text-xs font-bold">ADMIN</div>
-                </div>
-              </div>
-
-              {/* Membros adicionados */}
-              {members.map((member, index) => (
-                <div key={index} className="p-3 bg-muted rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{member.name}</p>
-                      <p className="text-sm text-muted-foreground">{member.email} • Membro</p>
+                {/* Criar Família */}
+                <TabsContent value="create">
+                  <form onSubmit={handleCreateFamily} className="space-y-6">
+                    <div className="text-center mb-6">
+                      <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Home className="w-8 h-8 text-green-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-800">Criar Nova Família</h3>
+                      <p className="text-sm text-gray-600">Você será o administrador da família</p>
                     </div>
-                    <Button type="button" variant="destructive" size="sm" onClick={() => removeMember(index)}>
-                      <Trash2 className="h-4 w-4" />
+
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="family-name">Nome da Família *</Label>
+                        <Input
+                          id="family-name"
+                          type="text"
+                          placeholder="Ex: Família Silva"
+                          value={createFamilyData.familyName}
+                          onChange={(e) =>
+                            setCreateFamilyData({
+                              ...createFamilyData,
+                              familyName: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="family-description">Descrição (Opcional)</Label>
+                        <Input
+                          id="family-description"
+                          type="text"
+                          placeholder="Ex: Nossa família unida e organizada"
+                          value={createFamilyData.description}
+                          onChange={(e) =>
+                            setCreateFamilyData({
+                              ...createFamilyData,
+                              description: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    {error && (
+                      <Alert className="border-red-200 bg-red-50">
+                        <AlertDescription className="text-red-800">{error}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-4 rounded-lg">
+                      <div className="flex items-start space-x-3">
+                        <CheckCircle className="w-5 h-5 text-orange-600 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-orange-800">Como administrador, você poderá:</p>
+                          <ul className="text-xs text-orange-700 mt-1 space-y-1">
+                            <li>• Convidar e gerenciar membros</li>
+                            <li>• Configurar permissões e mesadas</li>
+                            <li>• Visualizar todas as transações</li>
+                            <li>• Gerar relatórios completos</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Criando família..." : "Criar Família"}
+                      <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
-                  </div>
-                </div>
-              ))}
+                  </form>
+                </TabsContent>
 
-              {/* Adicionar novo membro */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <Input
-                  placeholder="Nome do membro"
-                  value={newMember.name}
-                  onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
-                />
-                <Input
-                  type="email"
-                  placeholder="Email do membro"
-                  value={newMember.email}
-                  onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
-                />
-                <Button type="button" onClick={addMember} variant="outline">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar
-                </Button>
-              </div>
-            </div>
+                {/* Entrar em Família */}
+                <TabsContent value="join">
+                  <form onSubmit={handleJoinFamily} className="space-y-6">
+                    <div className="text-center mb-6">
+                      <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Key className="w-8 h-8 text-blue-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-800">Entrar em Família Existente</h3>
+                      <p className="text-sm text-gray-600">Use o código fornecido pelo administrador</p>
+                    </div>
 
-            <Button type="submit" className="w-full bg-retro-green hover:bg-retro-green/90">
-              Criar Família
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="family-code">Código da Família *</Label>
+                        <Input
+                          id="family-code"
+                          type="text"
+                          placeholder="Ex: ABC123"
+                          className="text-center text-lg font-mono tracking-wider"
+                          value={joinFamilyData.familyCode}
+                          onChange={(e) =>
+                            setJoinFamilyData({
+                              ...joinFamilyData,
+                              familyCode: e.target.value.toUpperCase(),
+                            })
+                          }
+                          maxLength={6}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {error && (
+                      <Alert className="border-red-200 bg-red-50">
+                        <AlertDescription className="text-red-800">{error}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-lg">
+                      <div className="flex items-start space-x-3">
+                        <Users className="w-5 h-5 text-blue-600 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-blue-800">Ao entrar na família, você terá acesso a:</p>
+                          <ul className="text-xs text-blue-700 mt-1 space-y-1">
+                            <li>• Sua carteira pessoal</li>
+                            <li>• Tarefas e lista de compras compartilhadas</li>
+                            <li>• Controle de dispositivos IoT</li>
+                            <li>• Relatórios de gastos pessoais</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Entrando na família..." : "Entrar na Família"}
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+
+                    {/* Demo Code */}
+                    <div className="text-center">
+                      <p className="text-xs text-gray-500 mb-2">Para demonstração, use o código:</p>
+                      <Badge
+                        variant="outline"
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => setJoinFamilyData({ familyCode: "DEMO01" })}
+                      >
+                        DEMO01
+                      </Badge>
+                    </div>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   )
 }
+
+export default FamilySetup

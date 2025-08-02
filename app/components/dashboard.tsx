@@ -1,306 +1,311 @@
 "use client"
 
 import { useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { Progress } from "@/components/ui/progress"
 import {
-  PiggyBank,
+  DollarSign,
   TrendingUp,
   TrendingDown,
   Users,
-  LogOut,
-  Plus,
-  ShoppingCart,
   CheckSquare,
-  Smartphone,
-  Menu,
+  ShoppingCart,
+  Calendar,
+  Target,
+  Wallet,
+  PiggyBank,
 } from "lucide-react"
-import { ExpenseForm } from "./expense-form"
-import { ExpensesList } from "./expenses-list"
-import { Reports } from "./reports"
-import { MemberWallet } from "./member-wallet"
-import { FamilySettings } from "./family-settings"
-import { ShoppingList } from "./shopping-list"
-import { TasksList } from "./tasks-list"
-import { IoTControl } from "./iot-control"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-
-interface User {
-  id: string
-  name: string
-  email: string
-  role: "admin" | "member"
-  familyId?: string
-}
-
-interface Family {
-  id: string
-  name: string
-  adminId: string
-  members: User[]
-}
 
 interface DashboardProps {
-  user: User
-  family: Family | null
-  onLogout: () => void
+  user: any
 }
 
-export function Dashboard({ user, family, onLogout }: DashboardProps) {
-  const [activeTab, setActiveTab] = useState("overview")
-  const [showExpenseForm, setShowExpenseForm] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+export function Dashboard({ user }: DashboardProps) {
+  const [stats, setStats] = useState({
+    totalBalance: 2450.75,
+    monthlyIncome: 5200.0,
+    monthlyExpenses: 3850.25,
+    savingsGoal: 10000.0,
+    currentSavings: 6750.5,
+    pendingTasks: 8,
+    shoppingItems: 12,
+    familyMembers: 4,
+  })
 
-  // Dados simulados
-  const stats = {
-    totalBalance: 2580.5,
-    monthlyIncome: 4500.0,
-    monthlyExpenses: 1919.5,
-    familyMembers: family?.members.length || 1,
-  }
+  const [recentTransactions, setRecentTransactions] = useState([
+    {
+      id: "1",
+      description: "Supermercado Extra",
+      amount: -245.8,
+      category: "Alimentação",
+      date: new Date("2024-01-15"),
+      member: "Maria Silva",
+    },
+    {
+      id: "2",
+      description: "Salário Janeiro",
+      amount: 5200.0,
+      category: "Renda",
+      date: new Date("2024-01-01"),
+      member: "João Silva",
+    },
+    {
+      id: "3",
+      description: "Conta de Luz",
+      amount: -180.45,
+      category: "Utilidades",
+      date: new Date("2024-01-10"),
+      member: "Maria Silva",
+    },
+    {
+      id: "4",
+      description: "Farmácia",
+      amount: -67.9,
+      category: "Saúde",
+      date: new Date("2024-01-12"),
+      member: "Ana Silva",
+    },
+  ])
 
-  const tabs = [
-    { value: "overview", label: "Início", icon: PiggyBank },
-    { value: "expenses", label: "Gastos", icon: TrendingDown },
-    { value: "reports", label: "Relatórios", icon: TrendingUp },
-    { value: "wallet", label: "Carteira", icon: Users },
-    { value: "shopping", label: "Compras", icon: ShoppingCart },
-    { value: "tasks", label: "Tarefas", icon: CheckSquare },
-    { value: "iot", label: "IoT", icon: Smartphone },
-    { value: "settings", label: "Config", icon: Menu },
-  ]
+  const [quickActions] = useState([
+    { id: "add-expense", label: "Adicionar Gasto", icon: TrendingDown, color: "red" },
+    { id: "add-income", label: "Adicionar Renda", icon: TrendingUp, color: "green" },
+    { id: "add-task", label: "Nova Tarefa", icon: CheckSquare, color: "blue" },
+    { id: "add-shopping", label: "Lista Compras", icon: ShoppingCart, color: "purple" },
+  ])
+
+  // Calcular progresso da meta de economia
+  const savingsProgress = (stats.currentSavings / stats.savingsGoal) * 100
+
+  // Calcular saldo mensal
+  const monthlyBalance = stats.monthlyIncome - stats.monthlyExpenses
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-retro-yellow/20 to-retro-green/20">
-      {/* Mobile Header */}
-      <header className="bg-white shadow-sm border-b retro-border safe-area-top">
-        <div className="px-4 sm:px-6">
-          <div className="flex justify-between items-center h-14 sm:h-16">
-            <div className="flex items-center space-x-3">
-              <div className="h-8 w-8 sm:h-10 sm:w-10 bg-retro-orange rounded-full flex items-center justify-center">
-                <span className="text-lg sm:text-xl font-bold text-white">💰</span>
-              </div>
-              <div>
-                <h1 className="text-lg sm:text-xl font-bold font-retro">MinhaGrana</h1>
-                {family && (
-                  <p className="text-xs sm:text-sm text-muted-foreground truncate max-w-32 sm:max-w-none">
-                    {family.name}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <div className="text-right hidden sm:block">
-                <p className="font-medium text-sm">{user.name}</p>
-                <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-xs">
-                  {user.role === "admin" ? "Admin" : "Membro"}
-                </Badge>
-              </div>
-
-              {/* Mobile Menu */}
-              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                <SheetTrigger asChild className="sm:hidden">
-                  <Button variant="outline" size="sm">
-                    <Menu className="h-4 w-4" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-64">
-                  <div className="flex flex-col space-y-4 mt-6">
-                    <div className="text-center pb-4 border-b">
-                      <p className="font-medium">{user.name}</p>
-                      <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-xs mt-1">
-                        {user.role === "admin" ? "Administrador" : "Membro"}
-                      </Badge>
-                    </div>
-                    <Button variant="outline" onClick={onLogout} className="w-full bg-transparent">
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Sair
-                    </Button>
-                  </div>
-                </SheetContent>
-              </Sheet>
-
-              <Button variant="outline" size="sm" onClick={onLogout} className="hidden sm:flex bg-transparent">
-                <LogOut className="h-4 w-4" />
-              </Button>
+    <div className="space-y-6">
+      {/* Welcome Section */}
+      <div className="bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl p-6 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold mb-2">Olá, {user?.name?.split(" ")[0] || "Usuário"}! 👋</h2>
+            <p className="text-orange-100">Aqui está um resumo das suas finanças familiares</p>
+          </div>
+          <div className="hidden md:block">
+            <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center">
+              <PiggyBank className="w-10 h-10" />
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      <main className="px-4 sm:px-6 lg:px-8 py-4 sm:py-8 max-w-7xl mx-auto safe-area-bottom">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          {/* Mobile Tabs - Scrollable */}
-          <div className="sm:hidden">
-            <ScrollArea className="w-full whitespace-nowrap">
-              <TabsList className="inline-flex h-12 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground mobile-tabs">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon
-                  return (
-                    <TabsTrigger
-                      key={tab.value}
-                      value={tab.value}
-                      className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-xs font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm min-w-[80px]"
-                    >
-                      <Icon className="h-4 w-4 mb-1" />
-                      <span className="block text-xs">{tab.label}</span>
-                    </TabsTrigger>
-                  )
-                })}
-              </TabsList>
-            </ScrollArea>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Saldo Total */}
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-green-800">Saldo Total</CardTitle>
+            <Wallet className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-900">
+              R$ {stats.totalBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+            </div>
+            <p className="text-xs text-green-600 mt-1">+12% em relação ao mês passado</p>
+          </CardContent>
+        </Card>
+
+        {/* Renda Mensal */}
+        <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-blue-800">Renda Mensal</CardTitle>
+            <TrendingUp className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-900">
+              R$ {stats.monthlyIncome.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+            </div>
+            <p className="text-xs text-blue-600 mt-1">Estável este mês</p>
+          </CardContent>
+        </Card>
+
+        {/* Gastos Mensais */}
+        <Card className="bg-gradient-to-br from-red-50 to-pink-50 border-red-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-red-800">Gastos Mensais</CardTitle>
+            <TrendingDown className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-900">
+              R$ {stats.monthlyExpenses.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+            </div>
+            <p className="text-xs text-red-600 mt-1">-5% em relação ao mês passado</p>
+          </CardContent>
+        </Card>
+
+        {/* Membros da Família */}
+        <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-purple-800">Família</CardTitle>
+            <Users className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-900">{stats.familyMembers} membros</div>
+            <p className="text-xs text-purple-600 mt-1">Todos ativos</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Target className="w-5 h-5 text-orange-600" />
+            <span>Ações Rápidas</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {quickActions.map((action) => {
+              const Icon = action.icon
+              return (
+                <Button
+                  key={action.id}
+                  variant="outline"
+                  className={`h-auto py-4 flex flex-col items-center space-y-2 hover:bg-${action.color}-50 border-${action.color}-200`}
+                >
+                  <Icon className={`w-6 h-6 text-${action.color}-600`} />
+                  <span className="text-sm text-center">{action.label}</span>
+                </Button>
+              )
+            })}
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Desktop Tabs */}
-          <TabsList className="hidden sm:grid w-full grid-cols-8">
-            {tabs.map((tab) => (
-              <TabsTrigger key={tab.value} value={tab.value} className="text-xs lg:text-sm">
-                {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Meta de Economia */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <PiggyBank className="w-5 h-5 text-orange-600" />
+              <span>Meta de Economia</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600">Progresso</span>
+              <span className="text-sm font-medium">{savingsProgress.toFixed(1)}%</span>
+            </div>
+            <Progress value={savingsProgress} className="h-3" />
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">
+                R$ {stats.currentSavings.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </span>
+              <span className="font-medium">
+                R$ {stats.savingsGoal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-4 rounded-lg">
+              <p className="text-sm text-orange-800">
+                <strong>Faltam:</strong> R${" "}
+                {(stats.savingsGoal - stats.currentSavings).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} para
+                atingir sua meta!
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
-          <TabsContent value="overview" className="space-y-4 sm:space-y-6">
-            {/* Cards de Estatísticas - Mobile First */}
-            <div className="mobile-grid">
-              <Card className="retro-shadow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xs sm:text-sm font-medium">Saldo Total</CardTitle>
-                  <PiggyBank className="h-4 w-4 text-retro-green" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-lg sm:text-2xl font-bold text-retro-green">
-                    R$ {stats.totalBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="retro-shadow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xs sm:text-sm font-medium">Receita Mensal</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-retro-blue" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-lg sm:text-2xl font-bold text-retro-blue">
-                    R$ {stats.monthlyIncome.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="retro-shadow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xs sm:text-sm font-medium">Gastos Mensais</CardTitle>
-                  <TrendingDown className="h-4 w-4 text-retro-orange" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-lg sm:text-2xl font-bold text-retro-orange">
-                    R$ {stats.monthlyExpenses.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="retro-shadow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xs sm:text-sm font-medium">Membros</CardTitle>
-                  <Users className="h-4 w-4 text-retro-purple" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-lg sm:text-2xl font-bold text-retro-purple">{stats.familyMembers}</div>
-                </CardContent>
-              </Card>
+        {/* Resumo do Mês */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Calendar className="w-5 h-5 text-orange-600" />
+              <span>Resumo do Mês</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+              <div>
+                <p className="text-sm text-green-800 font-medium">Saldo Mensal</p>
+                <p className="text-xs text-green-600">Renda - Gastos</p>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-bold text-green-900">
+                  R$ {monthlyBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </p>
+              </div>
             </div>
 
-            {/* Ações Rápidas - Mobile Optimized */}
-            <Card className="retro-shadow">
-              <CardHeader>
-                <CardTitle className="text-lg sm:text-xl">Ações Rápidas</CardTitle>
-                <CardDescription className="text-sm">Acesse rapidamente as funcionalidades principais</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                  <Button
-                    onClick={() => setShowExpenseForm(true)}
-                    className="h-16 sm:h-20 bg-retro-orange hover:bg-retro-orange/90 flex-col text-xs sm:text-sm"
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 bg-orange-50 rounded-lg">
+                <CheckSquare className="w-6 h-6 text-orange-600 mx-auto mb-2" />
+                <p className="text-sm font-medium">{stats.pendingTasks}</p>
+                <p className="text-xs text-gray-600">Tarefas Pendentes</p>
+              </div>
+              <div className="text-center p-3 bg-purple-50 rounded-lg">
+                <ShoppingCart className="w-6 h-6 text-purple-600 mx-auto mb-2" />
+                <p className="text-sm font-medium">{stats.shoppingItems}</p>
+                <p className="text-xs text-gray-600">Itens na Lista</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Transactions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <DollarSign className="w-5 h-5 text-orange-600" />
+              <span>Transações Recentes</span>
+            </div>
+            <Button variant="outline" size="sm">
+              Ver Todas
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {recentTransactions.map((transaction) => (
+              <div
+                key={transaction.id}
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      transaction.amount > 0 ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                    }`}
                   >
-                    <Plus className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
-                    Novo Gasto
-                  </Button>
-                  <Button
-                    onClick={() => setActiveTab("shopping")}
-                    variant="outline"
-                    className="h-16 sm:h-20 flex-col text-xs sm:text-sm"
-                  >
-                    <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
-                    Compras
-                  </Button>
-                  <Button
-                    onClick={() => setActiveTab("tasks")}
-                    variant="outline"
-                    className="h-16 sm:h-20 flex-col text-xs sm:text-sm"
-                  >
-                    <CheckSquare className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
-                    Tarefas
-                  </Button>
-                  <Button
-                    onClick={() => setActiveTab("iot")}
-                    variant="outline"
-                    className="h-16 sm:h-20 flex-col text-xs sm:text-sm"
-                  >
-                    <Smartphone className="h-5 w-5 sm:h-6 sm:w-6 mb-1 sm:mb-2" />
-                    IoT
-                  </Button>
+                    {transaction.amount > 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <p className="font-medium">{transaction.description}</p>
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <Badge variant="secondary" className="text-xs">
+                        {transaction.category}
+                      </Badge>
+                      <span>•</span>
+                      <span>{transaction.member}</span>
+                    </div>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Gastos Recentes - Mobile Optimized */}
-            <Card className="retro-shadow">
-              <CardHeader>
-                <CardTitle className="text-lg sm:text-xl">Gastos Recentes</CardTitle>
-                <CardDescription className="text-sm">Últimas transações da família</CardDescription>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-6">
-                <ExpensesList limit={5} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="expenses">
-            <ExpensesList />
-          </TabsContent>
-
-          <TabsContent value="reports">
-            <Reports />
-          </TabsContent>
-
-          <TabsContent value="wallet">
-            <MemberWallet user={user} family={family} />
-          </TabsContent>
-
-          <TabsContent value="shopping">
-            <ShoppingList family={family} />
-          </TabsContent>
-
-          <TabsContent value="tasks">
-            <TasksList family={family} />
-          </TabsContent>
-
-          <TabsContent value="iot">
-            <IoTControl family={family} />
-          </TabsContent>
-
-          <TabsContent value="settings">
-            <FamilySettings user={user} family={family} />
-          </TabsContent>
-        </Tabs>
-
-        {/* Modal de Novo Gasto */}
-        {showExpenseForm && <ExpenseForm onClose={() => setShowExpenseForm(false)} user={user} family={family} />}
-      </main>
+                <div className="text-right">
+                  <p className={`font-bold ${transaction.amount > 0 ? "text-green-600" : "text-red-600"}`}>
+                    {transaction.amount > 0 ? "+" : ""}R${" "}
+                    {Math.abs(transaction.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs text-gray-500">{transaction.date.toLocaleDateString("pt-BR")}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
+
+export default Dashboard

@@ -1,221 +1,297 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { CheckSquare, Plus, Trash2, Calendar, User, AlertCircle } from "lucide-react"
-import { toast } from "sonner"
-
-interface Family {
-  id: string
-  name: string
-  adminId: string
-  members: { id: string; name: string; email: string; role: string }[]
-}
-
-interface Task {
-  id: string
-  title: string
-  description: string
-  assignedTo: string
-  priority: "low" | "medium" | "high"
-  dueDate: string
-  completed: boolean
-  createdBy: string
-  createdAt: string
-}
+import { CheckSquare, Plus, Calendar, User, Clock, Star, Filter, MoreHorizontal, Award } from "lucide-react"
 
 interface TasksListProps {
-  family: Family | null
+  user: any
 }
 
-export function TasksList({ family }: TasksListProps) {
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [showAddDialog, setShowAddDialog] = useState(false)
-  const [formData, setFormData] = useState({
+export function TasksList({ user }: TasksListProps) {
+  const [isAddingTask, setIsAddingTask] = useState(false)
+  const [filter, setFilter] = useState("all")
+
+  const [newTask, setNewTask] = useState({
     title: "",
     description: "",
     assignedTo: "",
-    priority: "medium" as "low" | "medium" | "high",
+    priority: "medium",
     dueDate: "",
+    reward: "",
   })
 
-  useEffect(() => {
-    // Carregar tarefas do localStorage
-    const savedTasks = JSON.parse(localStorage.getItem("family-tasks") || "[]")
-    setTasks(savedTasks)
-  }, [])
+  const [tasks, setTasks] = useState([
+    {
+      id: "1",
+      title: "Lavar a louça",
+      description: "Lavar todos os pratos e utensílios da cozinha",
+      assignedTo: "João",
+      assignedBy: "Maria",
+      priority: "high",
+      status: "pending",
+      dueDate: new Date("2024-01-16"),
+      reward: 10.0,
+      createdAt: new Date("2024-01-15"),
+    },
+    {
+      id: "2",
+      title: "Organizar o quarto",
+      description: "Arrumar a cama e organizar os brinquedos",
+      assignedTo: "Ana",
+      assignedBy: "João",
+      priority: "medium",
+      status: "completed",
+      dueDate: new Date("2024-01-15"),
+      reward: 5.0,
+      createdAt: new Date("2024-01-14"),
+      completedAt: new Date("2024-01-15"),
+    },
+    {
+      id: "3",
+      title: "Tirar o lixo",
+      description: "Levar o lixo para a coleta",
+      assignedTo: "Pedro",
+      assignedBy: "Maria",
+      priority: "low",
+      status: "in_progress",
+      dueDate: new Date("2024-01-17"),
+      reward: 3.0,
+      createdAt: new Date("2024-01-15"),
+    },
+    {
+      id: "4",
+      title: "Estudar matemática",
+      description: "Fazer os exercícios da página 45 a 50",
+      assignedTo: "Ana",
+      assignedBy: "João",
+      priority: "high",
+      status: "pending",
+      dueDate: new Date("2024-01-18"),
+      reward: 15.0,
+      createdAt: new Date("2024-01-15"),
+    },
+  ])
 
-  const handleAddTask = (e: React.FormEvent) => {
-    e.preventDefault()
+  const familyMembers = [
+    { id: "1", name: "João", role: "admin" },
+    { id: "2", name: "Maria", role: "member" },
+    { id: "3", name: "Ana", role: "member" },
+    { id: "4", name: "Pedro", role: "member" },
+  ]
 
-    if (!formData.title || !formData.assignedTo) {
-      toast.error("Preencha todos os campos obrigatórios")
-      return
-    }
+  const priorities = [
+    { value: "low", label: "Baixa", color: "bg-green-100 text-green-800" },
+    { value: "medium", label: "Média", color: "bg-yellow-100 text-yellow-800" },
+    { value: "high", label: "Alta", color: "bg-red-100 text-red-800" },
+  ]
 
-    const newTask: Task = {
+  const handleAddTask = () => {
+    if (!newTask.title || !newTask.assignedTo) return
+
+    const task = {
       id: Date.now().toString(),
-      title: formData.title,
-      description: formData.description,
-      assignedTo: formData.assignedTo,
-      priority: formData.priority,
-      dueDate: formData.dueDate,
-      completed: false,
-      createdBy: "user-1", // Simular usuário atual
-      createdAt: new Date().toISOString(),
+      title: newTask.title,
+      description: newTask.description,
+      assignedTo: newTask.assignedTo,
+      assignedBy: user?.name || "Admin",
+      priority: newTask.priority,
+      status: "pending",
+      dueDate: new Date(newTask.dueDate),
+      reward: Number.parseFloat(newTask.reward) || 0,
+      createdAt: new Date(),
     }
 
-    const updatedTasks = [newTask, ...tasks]
-    setTasks(updatedTasks)
-    localStorage.setItem("family-tasks", JSON.stringify(updatedTasks))
-
-    toast.success("Tarefa criada com sucesso!")
-    setFormData({ title: "", description: "", assignedTo: "", priority: "medium", dueDate: "" })
-    setShowAddDialog(false)
+    setTasks([task, ...tasks])
+    setNewTask({
+      title: "",
+      description: "",
+      assignedTo: "",
+      priority: "medium",
+      dueDate: "",
+      reward: "",
+    })
+    setIsAddingTask(false)
   }
 
-  const handleToggleTask = (id: string) => {
-    const updatedTasks = tasks.map((task) => (task.id === id ? { ...task, completed: !task.completed } : task))
-    setTasks(updatedTasks)
-    localStorage.setItem("family-tasks", JSON.stringify(updatedTasks))
+  const handleToggleTask = (taskId: string) => {
+    setTasks(
+      tasks.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              status: task.status === "completed" ? "pending" : "completed",
+              completedAt: task.status === "completed" ? undefined : new Date(),
+            }
+          : task,
+      ),
+    )
   }
 
-  const handleDeleteTask = (id: string) => {
-    const updatedTasks = tasks.filter((task) => task.id !== id)
-    setTasks(updatedTasks)
-    localStorage.setItem("family-tasks", JSON.stringify(updatedTasks))
-    toast.success("Tarefa removida!")
+  const filteredTasks = tasks.filter((task) => {
+    if (filter === "all") return true
+    if (filter === "my") return task.assignedTo === user?.name
+    if (filter === "pending") return task.status === "pending"
+    if (filter === "completed") return task.status === "completed"
+    return true
+  })
+
+  const formatCurrency = (amount: number) => {
+    return amount.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    })
   }
 
-  const pendingTasks = tasks.filter((task) => !task.completed)
-  const completedTasks = tasks.filter((task) => task.completed)
+  const getPriorityBadge = (priority: string) => {
+    const priorityConfig = priorities.find((p) => p.value === priority)
+    return <Badge className={priorityConfig?.color}>{priorityConfig?.label}</Badge>
+  }
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "bg-red-100 text-red-800"
-      case "medium":
-        return "bg-yellow-100 text-yellow-800"
-      case "low":
-        return "bg-green-100 text-green-800"
-      default:
-        return "bg-gray-100 text-gray-800"
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      pending: { label: "Pendente", color: "bg-gray-100 text-gray-800" },
+      in_progress: { label: "Em Andamento", color: "bg-blue-100 text-blue-800" },
+      completed: { label: "Concluída", color: "bg-green-100 text-green-800" },
     }
+    const config = statusConfig[status as keyof typeof statusConfig]
+    return <Badge className={config.color}>{config.label}</Badge>
   }
 
-  const getPriorityLabel = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "Alta"
-      case "medium":
-        return "Média"
-      case "low":
-        return "Baixa"
-      default:
-        return "Média"
-    }
-  }
-
-  const isOverdue = (dueDate: string) => {
-    if (!dueDate) return false
-    return new Date(dueDate) < new Date()
-  }
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return ""
-    return new Date(dateString).toLocaleDateString("pt-BR")
-  }
-
-  const getMemberName = (memberId: string) => {
-    const member = family?.members.find((m) => m.id === memberId)
-    return member?.name || "Membro não encontrado"
-  }
+  const totalRewards = tasks
+    .filter((task) => task.status === "completed" && task.assignedTo === user?.name)
+    .reduce((sum, task) => sum + task.reward, 0)
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <Card className="retro-shadow">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
-                <CheckSquare className="h-5 w-5" />
-                Tarefas da Família
-              </CardTitle>
-              <CardDescription className="text-sm">
-                {pendingTasks.length} tarefa{pendingTasks.length !== 1 ? "s" : ""} pendente
-                {pendingTasks.length !== 1 ? "s" : ""}
-                {completedTasks.length > 0 &&
-                  ` • ${completedTasks.length} concluída${completedTasks.length !== 1 ? "s" : ""}`}
-              </CardDescription>
+      <div className="text-center">
+        <h2 className="text-3xl font-bold text-amber-800 mb-2">Lista de Tarefas</h2>
+        <p className="text-amber-600">Organize e acompanhe as tarefas da família</p>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="border-amber-200 bg-gradient-to-br from-blue-50 to-cyan-50">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <CheckSquare className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-blue-800">
+                {tasks.filter((t) => t.status === "pending").length}
+              </div>
+              <p className="text-sm text-blue-600">Pendentes</p>
             </div>
-            <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+          </CardContent>
+        </Card>
+
+        <Card className="border-amber-200 bg-gradient-to-br from-yellow-50 to-orange-50">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <Clock className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-yellow-800">
+                {tasks.filter((t) => t.status === "in_progress").length}
+              </div>
+              <p className="text-sm text-yellow-600">Em Andamento</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-amber-200 bg-gradient-to-br from-green-50 to-emerald-50">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <Award className="w-8 h-8 text-green-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-green-800">
+                {tasks.filter((t) => t.status === "completed").length}
+              </div>
+              <p className="text-sm text-green-600">Concluídas</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-amber-200 bg-gradient-to-br from-purple-50 to-pink-50">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <Star className="w-8 h-8 text-purple-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-purple-800">{formatCurrency(totalRewards)}</div>
+              <p className="text-sm text-purple-600">Recompensas</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Actions */}
+      <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50">
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Select value={filter} onValueChange={setFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="my">Minhas Tarefas</SelectItem>
+                  <SelectItem value="pending">Pendentes</SelectItem>
+                  <SelectItem value="completed">Concluídas</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" className="border-amber-300 text-amber-700 bg-transparent">
+                <Filter className="w-4 h-4 mr-2" />
+                Filtros
+              </Button>
+            </div>
+
+            <Dialog open={isAddingTask} onOpenChange={setIsAddingTask}>
               <DialogTrigger asChild>
-                <Button className="bg-retro-blue hover:bg-retro-blue/90 w-full sm:w-auto">
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button className="bg-amber-600 hover:bg-amber-700">
+                  <Plus className="w-4 h-4 mr-2" />
                   Nova Tarefa
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Nova Tarefa</DialogTitle>
-                  <DialogDescription>Crie uma nova tarefa para a família</DialogDescription>
+                  <DialogTitle>Criar Nova Tarefa</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleAddTask} className="space-y-4">
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="task-title">Título *</Label>
+                    <Label>Título *</Label>
                     <Input
-                      id="task-title"
                       placeholder="Ex: Lavar a louça"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      required
-                      className="h-11"
+                      value={newTask.title}
+                      onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="task-description">Descrição</Label>
+                    <Label>Descrição</Label>
                     <Textarea
-                      id="task-description"
-                      placeholder="Detalhes da tarefa..."
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      rows={3}
-                      className="resize-none"
+                      placeholder="Descreva a tarefa..."
+                      value={newTask.description}
+                      onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Responsável *</Label>
                       <Select
-                        value={formData.assignedTo}
-                        onValueChange={(value) => setFormData({ ...formData, assignedTo: value })}
+                        value={newTask.assignedTo}
+                        onValueChange={(value) => setNewTask({ ...newTask, assignedTo: value })}
                       >
-                        <SelectTrigger className="h-11">
-                          <SelectValue placeholder="Selecione" />
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecionar" />
                         </SelectTrigger>
                         <SelectContent>
-                          {family?.members.map((member) => (
-                            <SelectItem key={member.id} value={member.id}>
+                          {familyMembers.map((member) => (
+                            <SelectItem key={member.id} value={member.name}>
                               {member.name}
                             </SelectItem>
                           ))}
@@ -226,187 +302,138 @@ export function TasksList({ family }: TasksListProps) {
                     <div className="space-y-2">
                       <Label>Prioridade</Label>
                       <Select
-                        value={formData.priority}
-                        onValueChange={(value: "low" | "medium" | "high") =>
-                          setFormData({ ...formData, priority: value })
-                        }
+                        value={newTask.priority}
+                        onValueChange={(value) => setNewTask({ ...newTask, priority: value })}
                       >
-                        <SelectTrigger className="h-11">
+                        <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="low">Baixa</SelectItem>
-                          <SelectItem value="medium">Média</SelectItem>
-                          <SelectItem value="high">Alta</SelectItem>
+                          {priorities.map((priority) => (
+                            <SelectItem key={priority.value} value={priority.value}>
+                              {priority.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="due-date">Data de Vencimento</Label>
-                    <Input
-                      id="due-date"
-                      type="date"
-                      value={formData.dueDate}
-                      onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                      className="h-11"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Data Limite</Label>
+                      <Input
+                        type="date"
+                        value={newTask.dueDate}
+                        onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Recompensa (R$)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0,00"
+                        value={newTask.reward}
+                        onChange={(e) => setNewTask({ ...newTask, reward: e.target.value })}
+                      />
+                    </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setShowAddDialog(false)}
-                      className="flex-1 h-11 order-2 sm:order-1"
-                    >
-                      Cancelar
-                    </Button>
-                    <Button
-                      type="submit"
-                      className="flex-1 h-11 bg-retro-blue hover:bg-retro-blue/90 order-1 sm:order-2"
-                    >
+                  <div className="flex space-x-2">
+                    <Button onClick={handleAddTask} className="flex-1 bg-amber-600 hover:bg-amber-700">
                       Criar Tarefa
                     </Button>
+                    <Button variant="outline" onClick={() => setIsAddingTask(false)} className="flex-1">
+                      Cancelar
+                    </Button>
                   </div>
-                </form>
+                </div>
               </DialogContent>
             </Dialog>
           </div>
-        </CardHeader>
+        </CardContent>
       </Card>
 
-      {/* Tarefas Pendentes */}
-      {pendingTasks.length > 0 && (
-        <Card className="retro-shadow">
-          <CardHeader>
-            <CardTitle className="text-lg">Tarefas Pendentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {pendingTasks.map((task) => (
-                <div key={task.id} className="border rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      checked={task.completed}
-                      onCheckedChange={() => handleToggleTask(task.id)}
-                      className="mt-1 data-[state=checked]:bg-retro-blue data-[state=checked]:text-white"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
-                        <h3 className="font-semibold text-sm sm:text-base">{task.title}</h3>
-                        <div className="flex items-center gap-2">
-                          <Badge className={getPriorityColor(task.priority)}>{getPriorityLabel(task.priority)}</Badge>
-                          {task.dueDate && isOverdue(task.dueDate) && (
-                            <Badge variant="destructive" className="text-xs">
-                              <AlertCircle className="h-3 w-3 mr-1" />
-                              Atrasada
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-
-                      {task.description && <p className="text-sm text-muted-foreground mb-3">{task.description}</p>}
-
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          <span>{getMemberName(task.assignedTo)}</span>
-                        </div>
-                        {task.dueDate && (
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            <span className={isOverdue(task.dueDate) ? "text-red-600" : ""}>
-                              {formatDate(task.dueDate)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+      {/* Tasks List */}
+      <div className="space-y-4">
+        {filteredTasks.map((task) => (
+          <Card key={task.id} className="border-amber-200 bg-gradient-to-r from-white to-amber-50">
+            <CardContent className="pt-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    checked={task.status === "completed"}
+                    onCheckedChange={() => handleToggleTask(task.id)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <h3
+                        className={`font-semibold ${
+                          task.status === "completed" ? "line-through text-gray-500" : "text-amber-800"
+                        }`}
+                      >
+                        {task.title}
+                      </h3>
+                      {getPriorityBadge(task.priority)}
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteTask(task.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+
+                    {task.description && <p className="text-sm text-amber-600 mb-2">{task.description}</p>}
+
+                    <div className="flex items-center space-x-4 text-sm text-amber-600">
+                      <div className="flex items-center space-x-1">
+                        <User className="w-4 h-4" />
+                        <span>{task.assignedTo}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>{task.dueDate.toLocaleDateString("pt-BR")}</span>
+                      </div>
+                      {task.reward > 0 && (
+                        <div className="flex items-center space-x-1">
+                          <Star className="w-4 h-4" />
+                          <span>{formatCurrency(task.reward)}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Tarefas Concluídas */}
-      {completedTasks.length > 0 && (
-        <Card className="retro-shadow">
-          <CardHeader>
-            <CardTitle className="text-lg">Tarefas Concluídas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {completedTasks.slice(0, 5).map((task) => (
-                <div key={task.id} className="border rounded-lg p-4 bg-muted/50">
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      checked={task.completed}
-                      onCheckedChange={() => handleToggleTask(task.id)}
-                      className="mt-1 data-[state=checked]:bg-retro-blue data-[state=checked]:text-white"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
-                        <h3 className="font-semibold text-sm sm:text-base line-through text-muted-foreground">
-                          {task.title}
-                        </h3>
-                        <Badge className={getPriorityColor(task.priority)}>{getPriorityLabel(task.priority)}</Badge>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          <span>{getMemberName(task.assignedTo)}</span>
-                        </div>
-                        {task.dueDate && (
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            <span>{formatDate(task.dueDate)}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteTask(task.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                <div className="flex items-center space-x-2">
+                  {getStatusBadge(task.status)}
+                  <Button variant="ghost" size="sm" className="text-amber-600">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
 
-      {/* Estado Vazio */}
-      {tasks.length === 0 && (
-        <Card className="retro-shadow">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="text-6xl mb-4">✅</div>
-            <h3 className="text-xl font-semibold mb-2">Nenhuma Tarefa</h3>
-            <p className="text-muted-foreground text-center mb-6">Comece criando tarefas para organizar a família</p>
-            <Button onClick={() => setShowAddDialog(true)} className="bg-retro-blue hover:bg-retro-blue/90">
-              <Plus className="h-4 w-4 mr-2" />
-              Criar Primeira Tarefa
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+        {filteredTasks.length === 0 && (
+          <Card className="border-dashed border-2 border-amber-300">
+            <CardContent className="pt-6">
+              <div className="text-center py-8">
+                <CheckSquare className="w-16 h-16 text-amber-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-amber-800 mb-2">Nenhuma tarefa encontrada</h3>
+                <p className="text-amber-600 mb-4">
+                  {filter === "all"
+                    ? "Crie sua primeira tarefa para começar"
+                    : "Não há tarefas com os filtros selecionados"}
+                </p>
+                <Button onClick={() => setIsAddingTask(true)} className="bg-amber-600 hover:bg-amber-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nova Tarefa
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   )
 }
+
+export default TasksList

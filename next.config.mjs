@@ -1,19 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configurações para Vercel
-  output: 'standalone',
-  
-  // PWA Configuration
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  images: {
+    unoptimized: true,
+  },
   experimental: {
-    serverComponentsExternalPackages: ['@prisma/client'],
+    optimizePackageImports: ['lucide-react'],
   },
-
-  // Otimizações para produção
-  compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
-  },
-
-  // Headers de segurança
   async headers() {
     return [
       {
@@ -31,6 +29,10 @@ const nextConfig = {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
           },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
         ],
       },
       {
@@ -46,35 +48,28 @@ const nextConfig = {
           },
         ],
       },
+      {
+        source: '/manifest.json',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/manifest+json',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
     ]
   },
-
-  // Configurações de imagem
-  images: {
-    domains: ['localhost'],
-    formats: ['image/webp', 'image/avif'],
-    unoptimized: true,
-  },
-
-  // Webpack customizado
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-      }
-    }
-    return config
-  },
-
-  // ESLint and TypeScript configurations
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
+  async rewrites() {
+    return [
+      {
+        source: '/sw.js',
+        destination: '/api/sw',
+      },
+    ]
   },
 }
 
