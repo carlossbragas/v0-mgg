@@ -4,241 +4,369 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
-  DollarSign,
-  Users,
-  ShoppingCart,
-  CheckSquare,
-  TrendingUp,
-  TrendingDown,
-  Wallet,
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+} from "@/components/ui/sidebar"
+import {
   PiggyBank,
+  Home,
+  CreditCard,
+  TrendingUp,
+  Users,
+  Settings,
+  LogOut,
   Target,
-  Calendar,
+  Plus,
+  ArrowUpRight,
+  ArrowDownRight,
+  Wallet,
+  ShoppingCart,
+  Lightbulb,
+  Bell,
 } from "lucide-react"
 
-interface DashboardProps {
-  familyData?: {
-    name: string
-    members: number
-    totalBalance: number
-    monthlyGoal: number
-    currentExpenses: number
-  }
+interface User {
+  id: string
+  name: string
+  email: string
+  role: "admin" | "member"
 }
 
-export function Dashboard({ familyData }: DashboardProps) {
-  const [selectedPeriod, setSelectedPeriod] = useState("month")
+interface Family {
+  id: string
+  name: string
+  description?: string
+  monthlyBudget: number
+  savingsGoal?: number
+  members: User[]
+}
 
-  const defaultData = {
-    name: "Família Silva",
-    members: 4,
-    totalBalance: 2500.0,
-    monthlyGoal: 3000.0,
-    currentExpenses: 1850.0,
-  }
+interface DashboardProps {
+  user: User | null
+  family: Family | null
+  onLogout: () => void
+}
 
-  const data = familyData || defaultData
-  const goalProgress = (data.currentExpenses / data.monthlyGoal) * 100
-  const remainingBudget = data.monthlyGoal - data.currentExpenses
+export function Dashboard({ user, family, onLogout }: DashboardProps) {
+  const [activeTab, setActiveTab] = useState("overview")
 
-  const quickStats = [
+  // Dados simulados
+  const currentSpent = 2847.5
+  const budgetUsed = family ? (currentSpent / family.monthlyBudget) * 100 : 0
+  const savingsProgress = family?.savingsGoal ? (850 / family.savingsGoal) * 100 : 0
+
+  const recentTransactions = [
     {
-      title: "Saldo Total",
-      value: `R$ ${data.totalBalance.toFixed(2)}`,
-      icon: Wallet,
-      trend: "+12%",
-      trendUp: true,
+      id: 1,
+      description: "Supermercado Extra",
+      amount: -156.8,
+      category: "Alimentação",
+      date: "Hoje",
+      type: "expense",
     },
-    {
-      title: "Gastos do Mês",
-      value: `R$ ${data.currentExpenses.toFixed(2)}`,
-      icon: TrendingDown,
-      trend: "-5%",
-      trendUp: false,
-    },
-    {
-      title: "Meta Mensal",
-      value: `R$ ${data.monthlyGoal.toFixed(2)}`,
-      icon: Target,
-      trend: `${goalProgress.toFixed(0)}%`,
-      trendUp: goalProgress < 80,
-    },
-    {
-      title: "Membros Ativos",
-      value: data.members.toString(),
-      icon: Users,
-      trend: "+1",
-      trendUp: true,
-    },
+    { id: 2, description: "Salário", amount: 3500.0, category: "Renda", date: "Ontem", type: "income" },
+    { id: 3, description: "Conta de Luz", amount: -89.5, category: "Utilidades", date: "2 dias", type: "expense" },
+    { id: 4, description: "Farmácia", amount: -45.2, category: "Saúde", date: "3 dias", type: "expense" },
   ]
 
-  const recentActivities = [
-    { type: "expense", description: "Supermercado Extra", amount: -125.5, member: "Maria", time: "2h atrás" },
-    { type: "income", description: "Mesada João", amount: +50.0, member: "João", time: "1 dia atrás" },
-    { type: "expense", description: "Farmácia", amount: -35.8, member: "Carlos", time: "2 dias atrás" },
-    { type: "task", description: "Tarefa concluída: Lavar louça", amount: +10.0, member: "Ana", time: "3 dias atrás" },
+  const categories = [
+    { name: "Alimentação", spent: 856.4, budget: 1200, color: "bg-red-500" },
+    { name: "Transporte", spent: 340.8, budget: 500, color: "bg-blue-500" },
+    { name: "Utilidades", spent: 289.5, budget: 400, color: "bg-green-500" },
+    { name: "Lazer", spent: 180.2, budget: 300, color: "bg-purple-500" },
+  ]
+
+  const sidebarItems = [
+    { icon: Home, label: "Visão Geral", value: "overview" },
+    { icon: CreditCard, label: "Transações", value: "transactions" },
+    { icon: TrendingUp, label: "Relatórios", value: "reports" },
+    { icon: Users, label: "Família", value: "family" },
+    { icon: Lightbulb, label: "IoT Control", value: "iot" },
+    { icon: Settings, label: "Configurações", value: "settings" },
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-              Olá, {data.name}! 👋
-            </h1>
-            <p className="text-gray-600 mt-1">Aqui está o resumo das suas finanças familiares</p>
-          </div>
-          <div className="flex gap-2">
-            {["week", "month", "year"].map((period) => (
-              <Button
-                key={period}
-                variant={selectedPeriod === period ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedPeriod(period)}
-                className="capitalize"
-              >
-                {period === "week" ? "Semana" : period === "month" ? "Mês" : "Ano"}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickStats.map((stat, index) => (
-            <Card
-              key={index}
-              className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <div className={`p-2 rounded-full ${stat.trendUp ? "bg-green-100" : "bg-red-100"}`}>
-                      <stat.icon className={`h-5 w-5 ${stat.trendUp ? "text-green-600" : "text-red-600"}`} />
-                    </div>
-                    <span className={`text-xs font-medium mt-2 ${stat.trendUp ? "text-green-600" : "text-red-600"}`}>
-                      {stat.trend}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Budget Progress */}
-        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PiggyBank className="h-5 w-5 text-orange-600" />
-              Progresso da Meta Mensal
-            </CardTitle>
-            <CardDescription>
-              Você gastou R$ {data.currentExpenses.toFixed(2)} de R$ {data.monthlyGoal.toFixed(2)}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <Progress value={goalProgress} className="h-3" />
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">{goalProgress.toFixed(1)}% da meta utilizada</span>
-                <span className={`font-medium ${remainingBudget > 0 ? "text-green-600" : "text-red-600"}`}>
-                  {remainingBudget > 0
-                    ? `R$ ${remainingBudget.toFixed(2)} restantes`
-                    : `R$ ${Math.abs(remainingBudget).toFixed(2)} acima da meta`}
-                </span>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-orange-50 via-red-50 to-pink-50">
+        <Sidebar className="border-r border-orange-200">
+          <SidebarHeader className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500">
+                <PiggyBank className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h2 className="font-bold text-lg bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                  MinhaGrana
+                </h2>
+                <p className="text-sm text-gray-600">{family?.name}</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </SidebarHeader>
 
-        {/* Recent Activities */}
-        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-orange-600" />
-              Atividades Recentes
-            </CardTitle>
-            <CardDescription>Últimas movimentações da família</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentActivities.map((activity, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2 rounded-full ${
-                        activity.type === "income"
-                          ? "bg-green-100"
-                          : activity.type === "expense"
-                            ? "bg-red-100"
-                            : "bg-blue-100"
-                      }`}
-                    >
-                      {activity.type === "income" ? (
-                        <TrendingUp className="h-4 w-4 text-green-600" />
-                      ) : activity.type === "expense" ? (
-                        <TrendingDown className="h-4 w-4 text-red-600" />
-                      ) : (
-                        <CheckSquare className="h-4 w-4 text-blue-600" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{activity.description}</p>
-                      <p className="text-sm text-gray-600">
-                        {activity.member} • {activity.time}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={`font-bold ${activity.amount > 0 ? "text-green-600" : "text-red-600"}`}>
-                      {activity.amount > 0 ? "+" : ""}R$ {Math.abs(activity.amount).toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-              ))}
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {sidebarItems.map((item) => (
+                    <SidebarMenuItem key={item.value}>
+                      <SidebarMenuButton
+                        onClick={() => setActiveTab(item.value)}
+                        isActive={activeTab === item.value}
+                        className="w-full justify-start"
+                      >
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+
+          <SidebarFooter className="p-4">
+            <div className="flex items-center gap-3 p-2 rounded-lg bg-white/50">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-gradient-to-r from-orange-200 to-red-200">
+                  {user?.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{user?.name}</p>
+                <p className="text-xs text-gray-600 truncate">{user?.email}</p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={onLogout} className="text-gray-600 hover:text-red-600">
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+          </SidebarFooter>
+          <SidebarRail />
+        </Sidebar>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-gradient-to-br from-orange-500 to-red-500 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <DollarSign className="h-8 w-8 mx-auto mb-3" />
-              <h3 className="font-bold text-lg mb-2">Adicionar Gasto</h3>
-              <p className="text-orange-100 text-sm">Registre uma nova despesa</p>
-            </CardContent>
-          </Card>
+        <SidebarInset className="flex-1">
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b border-orange-200 px-4 bg-white/80 backdrop-blur-sm">
+            <SidebarTrigger className="-ml-1" />
+            <div className="flex-1" />
+            <Button size="sm" className="bg-gradient-to-r from-orange-500 to-red-500">
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Transação
+            </Button>
+            <Button variant="outline" size="sm">
+              <Bell className="h-4 w-4" />
+            </Button>
+          </header>
 
-          <Card className="bg-gradient-to-br from-green-500 to-emerald-500 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <ShoppingCart className="h-8 w-8 mx-auto mb-3" />
-              <h3 className="font-bold text-lg mb-2">Lista de Compras</h3>
-              <p className="text-green-100 text-sm">Gerencie suas compras</p>
-            </CardContent>
-          </Card>
+          <main className="flex-1 p-6">
+            {activeTab === "overview" && (
+              <div className="space-y-6">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card className="bg-white/80 backdrop-blur-sm border-orange-200">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Orçamento Mensal</CardTitle>
+                      <Wallet className="h-4 w-4 text-orange-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">R$ {family?.monthlyBudget.toFixed(2)}</div>
+                      <p className="text-xs text-gray-600">
+                        Restam R$ {((family?.monthlyBudget || 0) - currentSpent).toFixed(2)}
+                      </p>
+                    </CardContent>
+                  </Card>
 
-          <Card className="bg-gradient-to-br from-blue-500 to-purple-500 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <CheckSquare className="h-8 w-8 mx-auto mb-3" />
-              <h3 className="font-bold text-lg mb-2">Tarefas</h3>
-              <p className="text-blue-100 text-sm">Organize as atividades</p>
-            </CardContent>
-          </Card>
-        </div>
+                  <Card className="bg-white/80 backdrop-blur-sm border-orange-200">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Gastos do Mês</CardTitle>
+                      <ShoppingCart className="h-4 w-4 text-red-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">R$ {currentSpent.toFixed(2)}</div>
+                      <p className="text-xs text-gray-600">{budgetUsed.toFixed(1)}% do orçamento</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-white/80 backdrop-blur-sm border-orange-200">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Meta de Economia</CardTitle>
+                      <Target className="h-4 w-4 text-green-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">R$ {family?.savingsGoal?.toFixed(2) || "0.00"}</div>
+                      <p className="text-xs text-gray-600">R$ 850.00 economizados</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-white/80 backdrop-blur-sm border-orange-200">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Membros Ativos</CardTitle>
+                      <Users className="h-4 w-4 text-blue-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{family?.members.length || 0}</div>
+                      <p className="text-xs text-gray-600">
+                        {family?.members.filter((m) => m.role === "admin").length || 0} administradores
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Budget Progress */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card className="bg-white/80 backdrop-blur-sm border-orange-200">
+                    <CardHeader>
+                      <CardTitle>Progresso do Orçamento</CardTitle>
+                      <CardDescription>Acompanhe seus gastos mensais</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Gasto atual</span>
+                          <span>
+                            R$ {currentSpent.toFixed(2)} / R$ {family?.monthlyBudget.toFixed(2)}
+                          </span>
+                        </div>
+                        <Progress value={budgetUsed} className="h-2" />
+                        <p className="text-xs text-gray-600">
+                          {budgetUsed > 80 ? "⚠️ Atenção: Você está próximo do limite!" : "✅ Gastos sob controle"}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-white/80 backdrop-blur-sm border-orange-200">
+                    <CardHeader>
+                      <CardTitle>Meta de Economia</CardTitle>
+                      <CardDescription>Progresso da sua economia mensal</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Economizado</span>
+                          <span>R$ 850.00 / R$ {family?.savingsGoal?.toFixed(2) || "0.00"}</span>
+                        </div>
+                        <Progress value={savingsProgress} className="h-2" />
+                        <p className="text-xs text-gray-600">
+                          {savingsProgress >= 100
+                            ? "🎉 Meta atingida!"
+                            : `Faltam R$ ${((family?.savingsGoal || 0) - 850).toFixed(2)}`}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Categories and Recent Transactions */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card className="bg-white/80 backdrop-blur-sm border-orange-200">
+                    <CardHeader>
+                      <CardTitle>Gastos por Categoria</CardTitle>
+                      <CardDescription>Distribuição dos seus gastos</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {categories.map((category) => (
+                        <div key={category.name} className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full ${category.color}`} />
+                              {category.name}
+                            </span>
+                            <span>
+                              R$ {category.spent.toFixed(2)} / R$ {category.budget.toFixed(2)}
+                            </span>
+                          </div>
+                          <Progress value={(category.spent / category.budget) * 100} className="h-1" />
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-white/80 backdrop-blur-sm border-orange-200">
+                    <CardHeader>
+                      <CardTitle>Transações Recentes</CardTitle>
+                      <CardDescription>Suas últimas movimentações</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {recentTransactions.map((transaction) => (
+                        <div key={transaction.id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`p-2 rounded-full ${
+                                transaction.type === "income"
+                                  ? "bg-green-100 text-green-600"
+                                  : "bg-red-100 text-red-600"
+                              }`}
+                            >
+                              {transaction.type === "income" ? (
+                                <ArrowUpRight className="h-4 w-4" />
+                              ) : (
+                                <ArrowDownRight className="h-4 w-4" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">{transaction.description}</p>
+                              <p className="text-xs text-gray-600">
+                                {transaction.category} • {transaction.date}
+                              </p>
+                            </div>
+                          </div>
+                          <span
+                            className={`font-semibold ${
+                              transaction.type === "income" ? "text-green-600" : "text-red-600"
+                            }`}
+                          >
+                            {transaction.type === "income" ? "+" : ""}R$ {Math.abs(transaction.amount).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
+
+            {activeTab !== "overview" && (
+              <div className="flex items-center justify-center h-96">
+                <Card className="bg-white/80 backdrop-blur-sm border-orange-200 p-8 text-center">
+                  <CardContent>
+                    <div className="p-4 rounded-full bg-orange-100 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                      <Settings className="h-8 w-8 text-orange-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2">Em Desenvolvimento</h3>
+                    <p className="text-gray-600 mb-4">
+                      Esta seção está sendo desenvolvida e estará disponível em breve.
+                    </p>
+                    <Button
+                      onClick={() => setActiveTab("overview")}
+                      className="bg-gradient-to-r from-orange-500 to-red-500"
+                    >
+                      Voltar ao Dashboard
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </main>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   )
 }
 

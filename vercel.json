@@ -1,7 +1,8 @@
 {
   "functions": {
     "app/api/**/*.ts": {
-      "runtime": "nodejs18.x"
+      "runtime": "nodejs18.x",
+      "maxDuration": 30
     }
   },
   "regions": ["gru1"],
@@ -59,6 +60,10 @@
     {
       "source": "/sw.js",
       "destination": "/api/sw"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
     }
   ]
 }

@@ -8,9 +8,13 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    domains: ['placeholder.svg'],
   },
   experimental: {
     optimizePackageImports: ['lucide-react'],
+    serverActions: {
+      allowedOrigins: ["localhost:3000", "*.vercel.app"]
+    }
   },
   async headers() {
     return [
