@@ -6,184 +6,264 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ArrowLeft, DollarSign, Save, Receipt } from "lucide-react"
 import { toast } from "sonner"
 
-interface User {
-  id: string
-  name: string
-  email: string
-  role: "admin" | "member"
-  familyId?: string
-}
-
-interface Family {
-  id: string
-  name: string
-  adminId: string
-  members: User[]
-}
-
 interface ExpenseFormProps {
-  onClose: () => void
-  user: User
-  family: Family | null
+  familyData: {
+    familyName: string
+    adminName: string
+    members: Array<{
+      name: string
+      role: "adult" | "child"
+      allowance: number
+    }>
+    budget: {
+      monthly: number
+      categories: Array<{
+        name: string
+        limit: number
+      }>
+    }
+  }
+  onBack: () => void
 }
 
-const categories = ["Alimentação", "Transporte", "Casa", "Saúde", "Educação", "Lazer", "Roupas", "Tecnologia", "Outros"]
-
-export function ExpenseForm({ onClose, user, family }: ExpenseFormProps) {
+export default function ExpenseForm({ familyData, onBack }: ExpenseFormProps) {
   const [formData, setFormData] = useState({
     description: "",
     amount: "",
     category: "",
+    member: "",
     date: new Date().toISOString().split("T")[0],
     notes: "",
-    member: user.id,
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const categories = familyData.budget.categories.map((cat) => cat.name)
+  const members = familyData.members.map((member) => member.name)
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.description || !formData.amount || !formData.category) {
-      toast.error("Preencha todos os campos obrigatórios")
+    if (!formData.description || !formData.amount || !formData.category || !formData.member) {
+      toast.error("Por favor, preencha todos os campos obrigatórios")
       return
     }
 
-    // Simular salvamento
-    const expense = {
-      id: Date.now().toString(),
-      ...formData,
-      amount: Number.parseFloat(formData.amount),
-      createdAt: new Date().toISOString(),
+    setIsSubmitting(true)
+
+    try {
+      // Simular envio para API
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      toast.success("Despesa adicionada com sucesso!")
+
+      // Reset form
+      setFormData({
+        description: "",
+        amount: "",
+        category: "",
+        member: "",
+        date: new Date().toISOString().split("T")[0],
+        notes: "",
+      })
+
+      // Voltar para dashboard após 1 segundo
+      setTimeout(() => {
+        onBack()
+      }, 1000)
+    } catch (error) {
+      toast.error("Erro ao adicionar despesa. Tente novamente.")
+    } finally {
+      setIsSubmitting(false)
     }
+  }
 
-    // Salvar no localStorage (simulação)
-    const expenses = JSON.parse(localStorage.getItem("expenses") || "[]")
-    expenses.unshift(expense)
-    localStorage.setItem("expenses", JSON.stringify(expenses))
+  const formatCurrency = (value: string) => {
+    const numericValue = value.replace(/\D/g, "")
+    const formattedValue = (Number(numericValue) / 100).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    })
+    return formattedValue
+  }
 
-    toast.success("Gasto registrado com sucesso!")
-    onClose()
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, "")
+    setFormData({ ...formData, amount: value })
   }
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto mx-4">
-        <DialogHeader className="text-left">
-          <DialogTitle className="font-retro text-lg sm:text-xl">Novo Gasto</DialogTitle>
-          <DialogDescription className="text-sm">Registre um novo gasto para sua família</DialogDescription>
-        </DialogHeader>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={onBack} className="text-emerald-700">
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-gray-800">Nova Despesa</h1>
+          <p className="text-gray-600">Adicione uma nova despesa para a família {familyData.familyName}</p>
+        </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="description" className="text-sm font-medium">
-              Descrição *
-            </Label>
-            <Input
-              id="description"
-              placeholder="Ex: Supermercado"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              required
-              className="h-11"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="amount" className="text-sm font-medium">
-                Valor *
-              </Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                placeholder="0,00"
-                value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                required
-                className="h-11"
-              />
+      {/* Form */}
+      <Card className="border-2 border-emerald-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-emerald-700">
+            <Receipt className="w-5 h-5" />
+            Detalhes da Despesa
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Descrição e Valor */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrição *</Label>
+                <Input
+                  id="description"
+                  placeholder="Ex: Supermercado, Gasolina, Cinema..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="border-emerald-200 focus:border-emerald-500"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="amount">Valor *</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    id="amount"
+                    placeholder="0,00"
+                    value={formData.amount ? formatCurrency(formData.amount) : ""}
+                    onChange={handleAmountChange}
+                    className="pl-10 border-emerald-200 focus:border-emerald-500"
+                    required
+                  />
+                </div>
+              </div>
             </div>
 
+            {/* Categoria e Membro */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Categoria *</Label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(value) => setFormData({ ...formData, category: value })}
+                >
+                  <SelectTrigger className="border-emerald-200 focus:border-emerald-500">
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Membro Responsável *</Label>
+                <Select value={formData.member} onValueChange={(value) => setFormData({ ...formData, member: value })}>
+                  <SelectTrigger className="border-emerald-200 focus:border-emerald-500">
+                    <SelectValue placeholder="Quem fez a despesa?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {members.map((member) => (
+                      <SelectItem key={member} value={member}>
+                        {member}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Data */}
             <div className="space-y-2">
-              <Label htmlFor="date" className="text-sm font-medium">
-                Data
-              </Label>
+              <Label htmlFor="date">Data da Despesa</Label>
               <Input
                 id="date"
                 type="date"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="h-11"
+                className="border-emerald-200 focus:border-emerald-500"
               />
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Categoria *</Label>
-            <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-              <SelectTrigger className="h-11">
-                <SelectValue placeholder="Selecione uma categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            {/* Observações */}
+            <div className="space-y-2">
+              <Label htmlFor="notes">Observações (opcional)</Label>
+              <Textarea
+                id="notes"
+                placeholder="Adicione detalhes adicionais sobre esta despesa..."
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="border-emerald-200 focus:border-emerald-500 min-h-[100px]"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Membro Responsável</Label>
-            <Select value={formData.member} onValueChange={(value) => setFormData({ ...formData, member: value })}>
-              <SelectTrigger className="h-11">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {family?.members.map((member) => (
-                  <SelectItem key={member.id} value={member.id}>
-                    {member.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            {/* Resumo */}
+            {formData.amount && (
+              <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
+                <h3 className="font-semibold text-emerald-800 mb-2">Resumo da Despesa</h3>
+                <div className="space-y-1 text-sm">
+                  <p>
+                    <span className="font-medium">Valor:</span> {formatCurrency(formData.amount)}
+                  </p>
+                  {formData.category && (
+                    <p>
+                      <span className="font-medium">Categoria:</span> {formData.category}
+                    </p>
+                  )}
+                  {formData.member && (
+                    <p>
+                      <span className="font-medium">Responsável:</span> {formData.member}
+                    </p>
+                  )}
+                  <p>
+                    <span className="font-medium">Data:</span> {new Date(formData.date).toLocaleDateString("pt-BR")}
+                  </p>
+                </div>
+              </div>
+            )}
 
-          <div className="space-y-2">
-            <Label htmlFor="notes" className="text-sm font-medium">
-              Observações
-            </Label>
-            <Textarea
-              id="notes"
-              placeholder="Observações adicionais..."
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              rows={3}
-              className="resize-none"
-            />
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="flex-1 h-11 bg-transparent order-2 sm:order-1"
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" className="flex-1 h-11 bg-retro-green hover:bg-retro-green/90 order-1 sm:order-2">
-              Salvar Gasto
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+            {/* Botões */}
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onBack}
+                className="flex-1 border-emerald-300 text-emerald-700 hover:bg-emerald-50 bg-transparent"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {isSubmitting ? (
+                  "Salvando..."
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Salvar Despesa
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

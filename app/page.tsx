@@ -1,107 +1,78 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Dashboard } from "./components/dashboard"
-import { LoginScreen } from "./components/login-screen"
-import { FamilySetup } from "./components/family-setup"
+import { useState } from "react"
+import LoginScreen from "./components/login-screen"
+import FamilySetup from "./components/family-setup"
+import Dashboard from "./components/dashboard"
 
-type AppState = "login" | "setup" | "dashboard"
-
-interface User {
-  id: string
-  name: string
-  email: string
-  role: "admin" | "member"
-}
-
-interface Family {
-  id: string
-  name: string
-  description?: string
-  monthlyBudget: number
-  savingsGoal?: number
-  members: User[]
-}
-
-export default function App() {
-  const [currentState, setCurrentState] = useState<AppState>("login")
-  const [user, setUser] = useState<User | null>(null)
-  const [family, setFamily] = useState<Family | null>(null)
-
-  // Simular verificação de autenticação
-  useEffect(() => {
-    const savedUser = localStorage.getItem("minhagrana_user")
-    const savedFamily = localStorage.getItem("minhagrana_family")
-
-    if (savedUser) {
-      setUser(JSON.parse(savedUser))
-      if (savedFamily) {
-        setFamily(JSON.parse(savedFamily))
-        setCurrentState("dashboard")
-      } else {
-        setCurrentState("setup")
-      }
+export default function Home() {
+  const [currentScreen, setCurrentScreen] = useState<"login" | "setup" | "dashboard">("login")
+  const [familyData, setFamilyData] = useState<{
+    familyName: string
+    adminName: string
+    members: Array<{
+      name: string
+      role: "adult" | "child"
+      allowance: number
+    }>
+    budget: {
+      monthly: number
+      categories: Array<{
+        name: string
+        limit: number
+      }>
     }
-  }, [])
+  } | null>(null)
 
-  const handleLogin = (userData: User) => {
-    setUser(userData)
-    localStorage.setItem("minhagrana_user", JSON.stringify(userData))
-
-    // Verificar se já tem família configurada
-    const savedFamily = localStorage.getItem("minhagrana_family")
-    if (savedFamily) {
-      setFamily(JSON.parse(savedFamily))
-      setCurrentState("dashboard")
-    } else {
-      setCurrentState("setup")
-    }
+  const handleLogin = (userData: { name: string; email: string }) => {
+    // Simular login bem-sucedido
+    setCurrentScreen("setup")
   }
 
-  const handleFamilySetup = (familyData: any) => {
-    const newFamily: Family = {
-      id: Date.now().toString(),
-      name: familyData.name,
-      description: familyData.description,
-      monthlyBudget: familyData.monthlyBudget,
-      savingsGoal: familyData.savingsGoal,
-      members: familyData.members || [],
+  const handleFamilySetup = (data: {
+    familyName: string
+    adminName: string
+    members: Array<{
+      name: string
+      role: "adult" | "child"
+      allowance: number
+    }>
+    budget: {
+      monthly: number
+      categories: Array<{
+        name: string
+        limit: number
+      }>
     }
-
-    setFamily(newFamily)
-    localStorage.setItem("minhagrana_family", JSON.stringify(newFamily))
-    setCurrentState("dashboard")
+  }) => {
+    setFamilyData(data)
+    setCurrentScreen("dashboard")
   }
 
-  const handleSkipSetup = () => {
-    // Criar família básica
-    const basicFamily: Family = {
-      id: Date.now().toString(),
-      name: `Família de ${user?.name}`,
-      monthlyBudget: 5000,
-      members: user ? [user] : [],
-    }
-
-    setFamily(basicFamily)
-    localStorage.setItem("minhagrana_family", JSON.stringify(basicFamily))
-    setCurrentState("dashboard")
+  // Dados padrão caso familyData seja null
+  const defaultFamilyData = {
+    familyName: "Minha Família",
+    adminName: "Usuário",
+    members: [{ name: "Usuário", role: "adult" as const, allowance: 0 }],
+    budget: {
+      monthly: 3000,
+      categories: [
+        { name: "Alimentação", limit: 800 },
+        { name: "Transporte", limit: 400 },
+        { name: "Entretenimento", limit: 300 },
+        { name: "Educação", limit: 500 },
+        { name: "Saúde", limit: 300 },
+      ],
+    },
   }
 
-  const handleLogout = () => {
-    setUser(null)
-    setFamily(null)
-    localStorage.removeItem("minhagrana_user")
-    localStorage.removeItem("minhagrana_family")
-    setCurrentState("login")
-  }
-
-  if (currentState === "login") {
+  if (currentScreen === "login") {
     return <LoginScreen onLogin={handleLogin} />
   }
 
-  if (currentState === "setup") {
-    return <FamilySetup onComplete={handleFamilySetup} onSkip={handleSkipSetup} />
+  if (currentScreen === "setup") {
+    return <FamilySetup onComplete={handleFamilySetup} />
   }
 
-  return <Dashboard user={user} family={family} onLogout={handleLogout} />
+  return <Dashboard familyData={familyData || defaultFamilyData} />
 }

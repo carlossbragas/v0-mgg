@@ -3,340 +3,136 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PiggyBank, Mail, Lock, Eye, EyeOff, Chrome, Github, Facebook } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ArrowLeft, Wallet, Eye, EyeOff } from "lucide-react"
 
 interface LoginScreenProps {
-  onLogin: (user: any) => void
+  onLogin: (userData: any) => void
+  onBack: () => void
 }
 
-export function LoginScreen({ onLogin }: LoginScreenProps) {
+export default function LoginScreen({ onLogin, onBack }: LoginScreenProps) {
+  const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    name: "",
+  })
 
-  // Login form state
-  const [loginEmail, setLoginEmail] = useState("")
-  const [loginPassword, setLoginPassword] = useState("")
-
-  // Signup form state
-  const [signupName, setSignupName] = useState("")
-  const [signupEmail, setSignupEmail] = useState("")
-  const [signupPassword, setSignupPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-
-    // Simular autenticação
-    setTimeout(() => {
-      const user = {
-        id: "1",
-        name: "João Silva",
-        email: loginEmail,
-        role: "admin",
-      }
-      onLogin(user)
-      setIsLoading(false)
-    }, 1500)
-  }
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (signupPassword !== confirmPassword) {
-      alert("Senhas não coincidem!")
-      return
-    }
-
-    setIsLoading(true)
-
-    // Simular criação de conta
-    setTimeout(() => {
-      const user = {
-        id: Date.now().toString(),
-        name: signupName,
-        email: signupEmail,
-        role: "admin",
-      }
-      onLogin(user)
-      setIsLoading(false)
-    }, 1500)
-  }
-
-  const handleSocialLogin = (provider: string) => {
-    setIsLoading(true)
-
-    // Simular login social
-    setTimeout(() => {
-      const user = {
-        id: Date.now().toString(),
-        name: `Usuário ${provider}`,
-        email: `usuario@${provider}.com`,
-        role: "admin",
-      }
-      onLogin(user)
-      setIsLoading(false)
-    }, 1000)
+    // Mock login
+    onLogin({
+      name: formData.name || "Usuário",
+      email: formData.email,
+    })
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 shadow-lg">
-              <PiggyBank className="h-10 w-10 text-white" />
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100">
+      {/* Header */}
+      <div className="bg-[#007A33] text-white p-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-emerald-700">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="flex items-center gap-2">
+            <Wallet className="w-6 h-6" />
+            <h1 className="text-xl font-bold">MinhaGrana</h1>
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
-            MinhaGrana
-          </h1>
-          <p className="text-gray-600 text-lg">Controle financeiro familiar inteligente</p>
         </div>
+      </div>
 
-        {/* Login/Signup Card */}
-        <Card className="border-0 shadow-2xl bg-white/90 backdrop-blur-sm">
-          <CardHeader className="text-center pb-4">
-            <CardTitle className="text-2xl">Bem-vindo de volta!</CardTitle>
-            <CardDescription>Entre na sua conta ou crie uma nova para começar</CardDescription>
+      <div className="p-6">
+        <Card className="max-w-md mx-auto border-2 border-emerald-200">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold text-gray-800">{isLogin ? "Entrar" : "Criar Conta"}</CardTitle>
+            <p className="text-gray-600">{isLogin ? "Acesse sua conta familiar" : "Crie sua conta familiar"}</p>
           </CardHeader>
 
           <CardContent>
-            <Tabs defaultValue="login" className="space-y-4">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Entrar</TabsTrigger>
-                <TabsTrigger value="signup">Criar Conta</TabsTrigger>
-              </TabsList>
-
-              {/* Login Tab */}
-              <TabsContent value="login" className="space-y-4">
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="login-email"
-                        type="email"
-                        placeholder="seu@email.com"
-                        value={loginEmail}
-                        onChange={(e) => setLoginEmail(e.target.value)}
-                        className="pl-10 h-12"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">Senha</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="login-password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Sua senha"
-                        value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                        className="pl-10 pr-10 h-12"
-                        required
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm">
-                    <label className="flex items-center space-x-2">
-                      <input type="checkbox" className="rounded" />
-                      <span className="text-gray-600">Lembrar de mim</span>
-                    </label>
-                    <Button variant="link" className="p-0 h-auto text-orange-600">
-                      Esqueci minha senha
-                    </Button>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Entrando..." : "Entrar"}
-                  </Button>
-                </form>
-              </TabsContent>
-
-              {/* Signup Tab */}
-              <TabsContent value="signup" className="space-y-4">
-                <form onSubmit={handleSignup} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Nome Completo</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="signup-name"
-                        type="text"
-                        placeholder="Seu nome completo"
-                        value={signupName}
-                        onChange={(e) => setSignupName(e.target.value)}
-                        className="pl-10 h-12"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="signup-email"
-                        type="email"
-                        placeholder="seu@email.com"
-                        value={signupEmail}
-                        onChange={(e) => setSignupEmail(e.target.value)}
-                        className="pl-10 h-12"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Senha</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="signup-password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Mínimo 6 caracteres"
-                        value={signupPassword}
-                        onChange={(e) => setSignupPassword(e.target.value)}
-                        className="pl-10 pr-10 h-12"
-                        required
-                        minLength={6}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirmar Senha</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="confirm-password"
-                        type="password"
-                        placeholder="Confirme sua senha"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="pl-10 h-12"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="text-sm">
-                    <label className="flex items-start space-x-2">
-                      <input type="checkbox" className="rounded mt-1" required />
-                      <span className="text-gray-600">
-                        Eu concordo com os{" "}
-                        <Button variant="link" className="p-0 h-auto text-orange-600">
-                          Termos de Uso
-                        </Button>{" "}
-                        e{" "}
-                        <Button variant="link" className="p-0 h-auto text-orange-600">
-                          Política de Privacidade
-                        </Button>
-                      </span>
-                    </label>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full h-12 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Criando conta..." : "Criar Conta"}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-
-            {/* Social Login */}
-            <div className="mt-6">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <Separator className="w-full" />
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome Completo</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="Seu nome completo"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33]"
+                    required
+                  />
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-gray-500">Ou continue com</span>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33]"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Sua senha"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="rounded-xl border-2 border-emerald-200 focus:border-[#007A33] pr-10"
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => handleSocialLogin("google")}
-                  disabled={isLoading}
-                  className="h-12 border-gray-200 hover:bg-gray-50"
-                >
-                  <Chrome className="h-5 w-5 text-red-500" />
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleSocialLogin("github")}
-                  disabled={isLoading}
-                  className="h-12 border-gray-200 hover:bg-gray-50"
-                >
-                  <Github className="h-5 w-5 text-gray-900" />
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleSocialLogin("facebook")}
-                  disabled={isLoading}
-                  className="h-12 border-gray-200 hover:bg-gray-50"
-                >
-                  <Facebook className="h-5 w-5 text-blue-600" />
+              <Button
+                type="submit"
+                className="w-full bg-[#007A33] hover:bg-[#005A26] text-white font-semibold py-3 rounded-xl"
+              >
+                {isLogin ? "Entrar" : "Criar Conta"}
+              </Button>
+            </form>
+
+            {isLogin && (
+              <div className="text-center mt-4">
+                <Button variant="link" className="text-[#007A33] text-sm">
+                  Esqueci minha senha
                 </Button>
               </div>
+            )}
+
+            <div className="text-center mt-6 pt-4 border-t border-emerald-200">
+              <p className="text-gray-600 text-sm">{isLogin ? "Não tem uma conta?" : "Já tem uma conta?"}</p>
+              <Button variant="link" onClick={() => setIsLogin(!isLogin)} className="text-[#007A33] font-semibold">
+                {isLogin ? "Criar conta" : "Fazer login"}
+              </Button>
             </div>
           </CardContent>
         </Card>
-
-        {/* Footer */}
-        <div className="text-center mt-8 text-sm text-gray-600">
-          <p>
-            Ao usar o MinhaGrana, você concorda com nossos{" "}
-            <Button variant="link" className="p-0 h-auto text-orange-600">
-              Termos de Serviço
-            </Button>
-          </p>
-          <p className="mt-2">© 2024 MinhaGrana. Todos os direitos reservados.</p>
-        </div>
       </div>
     </div>
   )
 }
-
-export default LoginScreen

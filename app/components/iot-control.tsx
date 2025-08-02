@@ -1,333 +1,573 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
-import { Slider } from "@/components/ui/slider"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Slider } from "@/components/ui/slider"
+import { Switch } from "@/components/ui/switch"
 import {
+  ArrowLeft,
+  Plus,
+  Smartphone,
   Lightbulb,
-  Plug,
   Thermometer,
-  Camera,
+  Shield,
+  Zap,
+  Activity,
   Wifi,
   WifiOff,
-  Power,
-  Settings,
-  Activity,
   Home,
   Bed,
   ChefHat,
   Bath,
-  Car,
+  DoorOpen,
+  Navigation,
+  TreePine,
 } from "lucide-react"
+import { toast } from "sonner"
 
-interface Dispositivo {
-  id: string
-  nome: string
-  tipo: "LAMPADA" | "TOMADA" | "SENSOR" | "CAMERA" | "TERMOSTATO" | "OUTRO"
-  comodo: string
-  ip: string
-  porta: number
-  status: "ONLINE" | "OFFLINE"
-  ativo: boolean
-  intensidade: number
-  versaoFirmware?: string
-  ultimaAtualizacao?: Date
+interface IoTControlProps {
+  onBack: () => void
 }
 
-const dispositivosSimulados: Dispositivo[] = [
-  {
-    id: "1",
-    nome: "Lâmpada Sala",
-    tipo: "LAMPADA",
-    comodo: "Sala",
-    ip: "192.168.1.101",
-    porta: 80,
-    status: "ONLINE",
-    ativo: true,
-    intensidade: 75,
-    versaoFirmware: "1.2.3",
-    ultimaAtualizacao: new Date(),
-  },
-  {
-    id: "2",
-    nome: "Tomada Cozinha",
-    tipo: "TOMADA",
-    comodo: "Cozinha",
-    ip: "192.168.1.102",
-    porta: 80,
-    status: "ONLINE",
-    ativo: false,
-    intensidade: 0,
-    versaoFirmware: "1.1.0",
-    ultimaAtualizacao: new Date(),
-  },
-  {
-    id: "3",
-    nome: "Sensor Quarto",
-    tipo: "SENSOR",
-    comodo: "Quarto",
-    ip: "192.168.1.103",
-    porta: 80,
-    status: "OFFLINE",
-    ativo: false,
-    intensidade: 0,
-    versaoFirmware: "2.0.1",
-    ultimaAtualizacao: new Date(),
-  },
-  {
-    id: "4",
-    nome: "Câmera Entrada",
-    tipo: "CAMERA",
-    comodo: "Entrada",
-    ip: "192.168.1.104",
-    porta: 8080,
-    status: "ONLINE",
-    ativo: true,
-    intensidade: 100,
-    versaoFirmware: "3.1.2",
-    ultimaAtualizacao: new Date(),
-  },
-  {
-    id: "5",
-    nome: "Termostato Sala",
-    tipo: "TERMOSTATO",
-    comodo: "Sala",
-    ip: "192.168.1.105",
-    porta: 80,
-    status: "ONLINE",
-    ativo: true,
-    intensidade: 22,
-    versaoFirmware: "1.5.0",
-    ultimaAtualizacao: new Date(),
-  },
-]
+export default function IoTControl({ onBack }: IoTControlProps) {
+  const [showAddDialog, setShowAddDialog] = useState(false)
+  const [selectedRoom, setSelectedRoom] = useState("all")
 
-const getIconForType = (tipo: string) => {
-  switch (tipo) {
-    case "LAMPADA":
-      return <Lightbulb className="w-5 h-5" />
-    case "TOMADA":
-      return <Plug className="w-5 h-5" />
-    case "SENSOR":
-      return <Activity className="w-5 h-5" />
-    case "CAMERA":
-      return <Camera className="w-5 h-5" />
-    case "TERMOSTATO":
-      return <Thermometer className="w-5 h-5" />
-    default:
-      return <Settings className="w-5 h-5" />
-  }
-}
+  const [newDevice, setNewDevice] = useState({
+    name: "",
+    type: "",
+    room: "",
+    brand: "",
+    model: "",
+  })
 
-const getIconForRoom = (comodo: string) => {
-  switch (comodo.toLowerCase()) {
-    case "sala":
-      return <Home className="w-4 h-4" />
-    case "quarto":
-      return <Bed className="w-4 h-4" />
-    case "cozinha":
-      return <ChefHat className="w-4 h-4" />
-    case "banheiro":
-      return <Bath className="w-4 h-4" />
-    case "garagem":
-      return <Car className="w-4 h-4" />
-    default:
-      return <Home className="w-4 h-4" />
-  }
-}
+  const [devices, setDevices] = useState([
+    {
+      id: 1,
+      name: "Luz da Sala",
+      type: "Iluminação",
+      room: "Sala de Estar",
+      brand: "Philips",
+      model: "Hue White",
+      status: "online",
+      state: { power: true, brightness: 75 },
+    },
+    {
+      id: 2,
+      name: "Ar Condicionado Quarto",
+      type: "Clima",
+      room: "Quarto Principal",
+      brand: "Samsung",
+      model: "WindFree",
+      status: "online",
+      state: { power: true, temperature: 22 },
+    },
+    {
+      id: 3,
+      name: "Câmera Entrada",
+      type: "Segurança",
+      room: "Entrada",
+      brand: "Ring",
+      model: "Video Doorbell",
+      status: "online",
+      state: { power: true, recording: true },
+    },
+    {
+      id: 4,
+      name: "Smart TV",
+      type: "Eletrodoméstico",
+      room: "Sala de Estar",
+      brand: "LG",
+      model: "OLED C1",
+      status: "offline",
+      state: { power: false },
+    },
+    {
+      id: 5,
+      name: "Sensor Movimento",
+      type: "Sensor",
+      room: "Corredor",
+      brand: "Xiaomi",
+      model: "Motion Sensor",
+      status: "online",
+      state: { power: true, motion: false },
+    },
+    {
+      id: 6,
+      name: "Luz do Quarto",
+      type: "Iluminação",
+      room: "Quarto das Crianças",
+      brand: "Philips",
+      model: "Hue Color",
+      status: "online",
+      state: { power: false, brightness: 50 },
+    },
+  ])
 
-export function IotControl() {
-  const [dispositivos, setDispositivos] = useState<Dispositivo[]>(dispositivosSimulados)
-  const [selectedRoom, setSelectedRoom] = useState<string>("todos")
+  const deviceTypes = [
+    { value: "Iluminação", icon: Lightbulb, color: "text-yellow-600" },
+    { value: "Clima", icon: Thermometer, color: "text-blue-600" },
+    { value: "Segurança", icon: Shield, color: "text-red-600" },
+    { value: "Eletrodoméstico", icon: Zap, color: "text-purple-600" },
+    { value: "Sensor", icon: Activity, color: "text-green-600" },
+  ]
 
-  const rooms = ["todos", ...Array.from(new Set(dispositivos.map((d) => d.comodo)))]
+  const rooms = [
+    { value: "Sala de Estar", icon: Home },
+    { value: "Quarto Principal", icon: Bed },
+    { value: "Quarto das Crianças", icon: Bed },
+    { value: "Cozinha", icon: ChefHat },
+    { value: "Banheiro", icon: Bath },
+    { value: "Entrada", icon: DoorOpen },
+    { value: "Corredor", icon: Navigation },
+    { value: "Área Externa", icon: TreePine },
+  ]
 
-  const filteredDevices =
-    selectedRoom === "todos" ? dispositivos : dispositivos.filter((d) => d.comodo === selectedRoom)
-
-  const stats = {
-    total: dispositivos.length,
-    online: dispositivos.filter((d) => d.status === "ONLINE").length,
-    offline: dispositivos.filter((d) => d.status === "OFFLINE").length,
-    ativos: dispositivos.filter((d) => d.ativo).length,
+  const getDeviceIcon = (type: string) => {
+    const deviceType = deviceTypes.find((dt) => dt.value === type)
+    return deviceType ? deviceType.icon : Smartphone
   }
 
-  const toggleDevice = (id: string) => {
-    setDispositivos((prev) =>
-      prev.map((device) =>
-        device.id === id ? { ...device, ativo: !device.ativo, ultimaAtualizacao: new Date() } : device,
+  const getDeviceColor = (type: string) => {
+    const deviceType = deviceTypes.find((dt) => dt.value === type)
+    return deviceType ? deviceType.color : "text-gray-600"
+  }
+
+  const getRoomIcon = (room: string) => {
+    const roomData = rooms.find((r) => r.value === room)
+    return roomData ? roomData.icon : Home
+  }
+
+  const addDevice = () => {
+    if (!newDevice.name || !newDevice.type || !newDevice.room) {
+      toast.error("Preencha todos os campos obrigatórios")
+      return
+    }
+
+    const device = {
+      id: Date.now(),
+      name: newDevice.name,
+      type: newDevice.type,
+      room: newDevice.room,
+      brand: newDevice.brand || "Genérico",
+      model: newDevice.model || "Modelo Padrão",
+      status: "online",
+      state: { power: false },
+    }
+
+    setDevices([...devices, device])
+    setNewDevice({ name: "", type: "", room: "", brand: "", model: "" })
+    setShowAddDialog(false)
+    toast.success("Dispositivo adicionado com sucesso!")
+  }
+
+  const toggleDevice = (id: number) => {
+    setDevices(
+      devices.map((device) =>
+        device.id === id ? { ...device, state: { ...device.state, power: !device.state.power } } : device,
       ),
+    )
+
+    const device = devices.find((d) => d.id === id)
+    if (device) {
+      toast.success(`${device.name} ${device.state.power ? "desligado" : "ligado"}`)
+    }
+  }
+
+  const updateDeviceState = (id: number, key: string, value: any) => {
+    setDevices(
+      devices.map((device) => (device.id === id ? { ...device, state: { ...device.state, [key]: value } } : device)),
     )
   }
 
-  const updateIntensity = (id: string, intensity: number[]) => {
-    setDispositivos((prev) =>
-      prev.map((device) =>
-        device.id === id ? { ...device, intensidade: intensity[0], ultimaAtualizacao: new Date() } : device,
-      ),
-    )
-  }
+  const filteredDevices = selectedRoom === "all" ? devices : devices.filter((device) => device.room === selectedRoom)
+
+  const onlineDevices = devices.filter((d) => d.status === "online").length
+  const activeDevices = devices.filter((d) => d.state.power).length
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="text-center">
-        <h2 className="text-3xl font-bold text-amber-800 mb-2">Controle IoT</h2>
-        <p className="text-amber-600">Gerencie todos os dispositivos da sua casa</p>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={onBack} className="text-emerald-700">
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-gray-800">Controle IoT</h1>
+          <p className="text-gray-600">Gerencie todos os dispositivos inteligentes da casa</p>
+        </div>
+        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+          <DialogTrigger asChild>
+            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Plus className="w-4 h-4 mr-2" />
+              Adicionar Dispositivo
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-emerald-700">
+                <Plus className="w-5 h-5" />
+                Adicionar Dispositivo IoT
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Nome do Dispositivo *</Label>
+                <Input
+                  placeholder="Ex: Luz da Sala, Ar Condicionado..."
+                  value={newDevice.name}
+                  onChange={(e) => setNewDevice({ ...newDevice, name: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tipo *</Label>
+                <Select value={newDevice.type} onValueChange={(value) => setNewDevice({ ...newDevice, type: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {deviceTypes.map((type) => {
+                      const Icon = type.icon
+                      return (
+                        <SelectItem key={type.value} value={type.value}>
+                          <div className="flex items-center gap-2">
+                            <Icon className={`w-4 h-4 ${type.color}`} />
+                            {type.value}
+                          </div>
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Cômodo *</Label>
+                <Select value={newDevice.room} onValueChange={(value) => setNewDevice({ ...newDevice, room: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o cômodo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rooms.map((room) => {
+                      const Icon = room.icon
+                      return (
+                        <SelectItem key={room.value} value={room.value}>
+                          <div className="flex items-center gap-2">
+                            <Icon className="w-4 h-4 text-gray-600" />
+                            {room.value}
+                          </div>
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Marca</Label>
+                  <Input
+                    placeholder="Ex: Philips, Samsung..."
+                    value={newDevice.brand}
+                    onChange={(e) => setNewDevice({ ...newDevice, brand: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Modelo</Label>
+                  <Input
+                    placeholder="Ex: Hue White, WindFree..."
+                    value={newDevice.model}
+                    onChange={(e) => setNewDevice({ ...newDevice, model: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button variant="outline" onClick={() => setShowAddDialog(false)} className="flex-1">
+                  Cancelar
+                </Button>
+                <Button onClick={addDevice} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white">
+                  Adicionar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-amber-800">{stats.total}</div>
-            <div className="text-sm text-amber-600">Total</div>
+      {/* Resumo */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border-2 border-emerald-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total de Dispositivos</p>
+                <p className="text-2xl font-bold text-gray-800">{devices.length}</p>
+              </div>
+              <Smartphone className="w-8 h-8 text-emerald-600" />
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-green-800">{stats.online}</div>
-            <div className="text-sm text-green-600">Online</div>
+        <Card className="border-2 border-emerald-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Online</p>
+                <p className="text-2xl font-bold text-green-600">{onlineDevices}</p>
+              </div>
+              <Wifi className="w-8 h-8 text-green-600" />
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="border-red-200 bg-gradient-to-br from-red-50 to-rose-50">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-red-800">{stats.offline}</div>
-            <div className="text-sm text-red-600">Offline</div>
+        <Card className="border-2 border-emerald-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Ativos</p>
+                <p className="text-2xl font-bold text-blue-600">{activeDevices}</p>
+              </div>
+              <Zap className="w-8 h-8 text-blue-600" />
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-blue-800">{stats.ativos}</div>
-            <div className="text-sm text-blue-600">Ativos</div>
+        <Card className="border-2 border-emerald-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Offline</p>
+                <p className="text-2xl font-bold text-red-600">{devices.length - onlineDevices}</p>
+              </div>
+              <WifiOff className="w-8 h-8 text-red-600" />
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Room Filter */}
-      <Tabs value={selectedRoom} onValueChange={setSelectedRoom} className="w-full">
-        <TabsList className="grid w-full grid-cols-6 bg-amber-100 border-amber-200">
-          {rooms.map((room) => (
-            <TabsTrigger
-              key={room}
-              value={room}
-              className="data-[state=active]:bg-amber-200 data-[state=active]:text-amber-800 flex items-center gap-1"
+      {/* Filtros por Cômodo */}
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          variant={selectedRoom === "all" ? "default" : "outline"}
+          onClick={() => setSelectedRoom("all")}
+          className={
+            selectedRoom === "all"
+              ? "bg-emerald-600 hover:bg-emerald-700"
+              : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+          }
+        >
+          Todos ({devices.length})
+        </Button>
+        {rooms.map((room) => {
+          const Icon = room.icon
+          const count = devices.filter((d) => d.room === room.value).length
+          if (count === 0) return null
+
+          return (
+            <Button
+              key={room.value}
+              variant={selectedRoom === room.value ? "default" : "outline"}
+              onClick={() => setSelectedRoom(room.value)}
+              className={
+                selectedRoom === room.value
+                  ? "bg-emerald-600 hover:bg-emerald-700"
+                  : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              }
             >
-              {room !== "todos" && getIconForRoom(room)}
-              <span className="capitalize">{room}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+              <Icon className="w-4 h-4 mr-2" />
+              {room.value} ({count})
+            </Button>
+          )
+        })}
+      </div>
 
-        <TabsContent value={selectedRoom} className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredDevices.map((device) => (
-              <Card
-                key={device.id}
-                className={`border-2 transition-all duration-200 ${
-                  device.status === "ONLINE"
-                    ? "border-green-200 bg-gradient-to-br from-green-50 to-emerald-50"
-                    : "border-red-200 bg-gradient-to-br from-red-50 to-rose-50"
-                }`}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {getIconForType(device.tipo)}
-                      <CardTitle className="text-lg">{device.nome}</CardTitle>
-                    </div>
-                    <Badge
-                      variant={device.status === "ONLINE" ? "default" : "destructive"}
-                      className="flex items-center gap-1"
+      {/* Lista de Dispositivos */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredDevices.map((device) => {
+          const DeviceIcon = getDeviceIcon(device.type)
+          const RoomIcon = getRoomIcon(device.room)
+
+          return (
+            <Card
+              key={device.id}
+              className={`border-2 transition-all ${
+                device.status === "online" ? "border-emerald-200 hover:shadow-lg" : "border-gray-200 bg-gray-50"
+              }`}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2 rounded-full ${device.status === "online" ? "bg-emerald-100" : "bg-gray-100"}`}
                     >
-                      {device.status === "ONLINE" ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-                      {device.status}
-                    </Badge>
-                  </div>
-                  <CardDescription className="flex items-center gap-1">
-                    {getIconForRoom(device.comodo)}
-                    {device.comodo}
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  {/* Power Control */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Power className="w-4 h-4" />
-                      <span className="font-medium">Energia</span>
-                    </div>
-                    <Switch
-                      checked={device.ativo}
-                      onCheckedChange={() => toggleDevice(device.id)}
-                      disabled={device.status === "OFFLINE"}
-                    />
-                  </div>
-
-                  {/* Intensity Control */}
-                  {(device.tipo === "LAMPADA" || device.tipo === "TERMOSTATO") && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">
-                          {device.tipo === "TERMOSTATO" ? "Temperatura" : "Intensidade"}
-                        </span>
-                        <span className="text-sm text-gray-600">
-                          {device.intensidade}
-                          {device.tipo === "TERMOSTATO" ? "°C" : "%"}
-                        </span>
-                      </div>
-                      <Slider
-                        value={[device.intensidade]}
-                        onValueChange={(value) => updateIntensity(device.id, value)}
-                        max={device.tipo === "TERMOSTATO" ? 30 : 100}
-                        min={device.tipo === "TERMOSTATO" ? 16 : 0}
-                        step={1}
-                        disabled={device.status === "OFFLINE" || !device.ativo}
-                        className="w-full"
+                      <DeviceIcon
+                        className={`w-5 h-5 ${
+                          device.status === "online" ? getDeviceColor(device.type) : "text-gray-400"
+                        }`}
                       />
                     </div>
-                  )}
-
-                  {/* Device Info */}
-                  <div className="text-xs text-gray-500 space-y-1 pt-2 border-t">
                     <div>
-                      IP: {device.ip}:{device.porta}
+                      <h3 className="font-semibold text-gray-800">{device.name}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <RoomIcon className="w-3 h-3 text-gray-500" />
+                        <span className="text-xs text-gray-500">{device.room}</span>
+                      </div>
                     </div>
-                    {device.versaoFirmware && <div>Firmware: v{device.versaoFirmware}</div>}
-                    <div>Atualizado: {device.ultimaAtualizacao?.toLocaleTimeString("pt-BR")}</div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={device.status === "online" ? "default" : "secondary"}
+                      className={
+                        device.status === "online"
+                          ? "bg-green-100 text-green-800 border-green-300"
+                          : "bg-gray-100 text-gray-600"
+                      }
+                    >
+                      {device.status === "online" ? (
+                        <>
+                          <Wifi className="w-3 h-3 mr-1" />
+                          Online
+                        </>
+                      ) : (
+                        <>
+                          <WifiOff className="w-3 h-3 mr-1" />
+                          Offline
+                        </>
+                      )}
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
 
-          {filteredDevices.length === 0 && (
-            <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50">
-              <CardContent className="p-8 text-center">
-                <Settings className="w-12 h-12 text-amber-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-amber-800 mb-2">Nenhum dispositivo encontrado</h3>
-                <p className="text-amber-600">
-                  {selectedRoom === "todos"
-                    ? "Adicione dispositivos IoT para começar a controlar sua casa."
-                    : `Não há dispositivos no cômodo "${selectedRoom}".`}
-                </p>
+              <CardContent className="space-y-4">
+                {/* Informações do Dispositivo */}
+                <div className="text-xs text-gray-500">
+                  <p>
+                    {device.brand} {device.model}
+                  </p>
+                  <p>Tipo: {device.type}</p>
+                </div>
+
+                {/* Controles */}
+                {device.status === "online" && (
+                  <div className="space-y-3">
+                    {/* Power Switch */}
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm">Ligado/Desligado</Label>
+                      <Switch checked={device.state.power} onCheckedChange={() => toggleDevice(device.id)} />
+                    </div>
+
+                    {/* Controles Específicos por Tipo */}
+                    {device.state.power && (
+                      <>
+                        {/* Controle de Brilho para Iluminação */}
+                        {device.type === "Iluminação" && device.state.brightness !== undefined && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-sm">Brilho</Label>
+                              <span className="text-sm text-gray-600">{device.state.brightness}%</span>
+                            </div>
+                            <Slider
+                              value={[device.state.brightness]}
+                              onValueChange={(value) => updateDeviceState(device.id, "brightness", value[0])}
+                              max={100}
+                              step={1}
+                              className="w-full"
+                            />
+                          </div>
+                        )}
+
+                        {/* Controle de Temperatura para Clima */}
+                        {device.type === "Clima" && device.state.temperature !== undefined && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-sm">Temperatura</Label>
+                              <span className="text-sm text-gray-600">{device.state.temperature}°C</span>
+                            </div>
+                            <Slider
+                              value={[device.state.temperature]}
+                              onValueChange={(value) => updateDeviceState(device.id, "temperature", value[0])}
+                              min={16}
+                              max={30}
+                              step={1}
+                              className="w-full"
+                            />
+                          </div>
+                        )}
+
+                        {/* Status de Gravação para Segurança */}
+                        {device.type === "Segurança" && device.state.recording !== undefined && (
+                          <div className="flex items-center justify-between">
+                            <Label className="text-sm">Gravando</Label>
+                            <Switch
+                              checked={device.state.recording}
+                              onCheckedChange={(checked) => updateDeviceState(device.id, "recording", checked)}
+                            />
+                          </div>
+                        )}
+
+                        {/* Status de Movimento para Sensores */}
+                        {device.type === "Sensor" && device.state.motion !== undefined && (
+                          <div className="flex items-center justify-between">
+                            <Label className="text-sm">Movimento Detectado</Label>
+                            <Badge variant={device.state.motion ? "destructive" : "secondary"}>
+                              {device.state.motion ? "Sim" : "Não"}
+                            </Badge>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Dispositivo Offline */}
+                {device.status === "offline" && (
+                  <div className="text-center py-4">
+                    <WifiOff className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">Dispositivo offline</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50 bg-transparent"
+                    >
+                      Tentar Reconectar
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+          )
+        })}
+      </div>
+
+      {/* Estado Vazio */}
+      {filteredDevices.length === 0 && (
+        <Card className="border-2 border-emerald-200">
+          <CardContent className="p-8 text-center">
+            <Smartphone className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">
+              {selectedRoom === "all" ? "Nenhum dispositivo encontrado" : `Nenhum dispositivo em ${selectedRoom}`}
+            </h3>
+            <p className="text-gray-500 mb-4">
+              {selectedRoom === "all"
+                ? "Adicione seu primeiro dispositivo IoT para começar"
+                : "Não há dispositivos neste cômodo"}
+            </p>
+            <Button onClick={() => setShowAddDialog(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Plus className="w-4 h-4 mr-2" />
+              Adicionar Dispositivo
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
-
-// Export default para compatibilidade
-export default IotControl
-
-// Export alternativo
-export { IotControl as IoTControl }

@@ -1,433 +1,397 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Wallet, Plus, TrendingUp, TrendingDown, Filter, Download, Eye, EyeOff, PiggyBank, Target } from "lucide-react"
-
-interface Transaction {
-  id: string
-  type: "income" | "expense"
-  amount: number
-  description: string
-  date: Date
-  category: string
-  status: "completed" | "pending"
-}
-
-interface Goal {
-  id: string
-  name: string
-  target: number
-  current: number
-  deadline: Date
-}
+import { Progress } from "@/components/ui/progress"
+import { ArrowLeft, Wallet, TrendingUp, TrendingDown, DollarSign, Target, Calendar, Eye, EyeOff } from "lucide-react"
 
 interface MemberWalletProps {
-  user: any
+  familyData: {
+    familyName: string
+    adminName: string
+    members: Array<{
+      name: string
+      role: "adult" | "child"
+      allowance: number
+    }>
+    budget: {
+      monthly: number
+      categories: Array<{
+        name: string
+        limit: number
+      }>
+    }
+  }
+  onBack: () => void
 }
 
-export function MemberWallet({ user }: MemberWalletProps) {
-  const [balance, setBalance] = useState(1250.75)
-  const [showBalance, setShowBalance] = useState(true)
-  const [isAddingTransaction, setIsAddingTransaction] = useState(false)
+export default function MemberWallet({ familyData, onBack }: MemberWalletProps) {
+  const [showBalances, setShowBalances] = useState(true)
+  const [selectedMember, setSelectedMember] = useState<string | null>(null)
 
-  const [newTransaction, setNewTransaction] = useState({
-    type: "expense",
-    amount: "",
-    description: "",
-    category: "",
-    date: new Date().toISOString().split("T")[0],
-  })
-
-  const [transactions, setTransactions] = useState<Transaction[]>([
+  // Mock data para carteiras dos membros
+  const walletData = [
     {
-      id: "1",
-      type: "expense",
-      amount: -45.5,
-      description: "Lanche na escola",
-      category: "Alimentação",
-      date: new Date("2024-01-15"),
-      status: "completed",
+      name: "João Silva",
+      role: "adult",
+      balance: 3253.7,
+      monthlyIncome: 5000.0,
+      monthlyExpenses: 2800.0,
+      savings: 1200.0,
+      allowance: 0,
+      transactions: [
+        { id: 1, type: "income", description: "Salário", amount: 5000.0, date: "2024-01-01" },
+        { id: 2, type: "expense", description: "Supermercado", amount: -245.67, date: "2024-01-15" },
+        { id: 3, type: "expense", description: "Restaurante", amount: -198.4, date: "2024-01-10" },
+      ],
     },
     {
-      id: "2",
-      type: "income",
-      amount: 50.0,
-      description: "Mesada semanal",
-      category: "Mesada",
-      date: new Date("2024-01-14"),
-      status: "completed",
+      name: "Maria Silva",
+      role: "adult",
+      balance: 1200.0,
+      monthlyIncome: 3500.0,
+      monthlyExpenses: 1800.0,
+      savings: 800.0,
+      allowance: 0,
+      transactions: [
+        { id: 4, type: "income", description: "Freelance", amount: 1200.0, date: "2024-01-05" },
+        { id: 5, type: "expense", description: "Gasolina", amount: -120.0, date: "2024-01-14" },
+      ],
     },
     {
-      id: "3",
-      type: "expense",
-      amount: -12.0,
-      description: "Transporte",
-      category: "Transporte",
-      date: new Date("2024-01-13"),
-      status: "completed",
+      name: "Pedro Silva",
+      role: "child",
+      balance: 150.0,
+      monthlyIncome: 200.0,
+      monthlyExpenses: 85.5,
+      savings: 50.0,
+      allowance: 200.0,
+      transactions: [
+        { id: 6, type: "income", description: "Mesada", amount: 200.0, date: "2024-01-01" },
+        { id: 7, type: "expense", description: "Cinema", amount: -85.5, date: "2024-01-13" },
+        { id: 8, type: "income", description: "Tarefa Extra", amount: 25.0, date: "2024-01-08" },
+      ],
     },
     {
-      id: "4",
-      type: "expense",
-      amount: -25.3,
-      description: "Material escolar",
-      category: "Educação",
-      date: new Date("2024-01-12"),
-      status: "pending",
+      name: "Ana Silva",
+      role: "child",
+      balance: 75.0,
+      monthlyIncome: 150.0,
+      monthlyExpenses: 67.8,
+      savings: 25.0,
+      allowance: 150.0,
+      transactions: [
+        { id: 9, type: "income", description: "Mesada", amount: 150.0, date: "2024-01-01" },
+        { id: 10, type: "expense", description: "Farmácia", amount: -67.8, date: "2024-01-12" },
+      ],
     },
-  ])
-
-  const [goals, setGoals] = useState<Goal[]>([
-    {
-      id: "1",
-      name: "Novo Videogame",
-      target: 500.0,
-      current: 180.0,
-      deadline: new Date("2024-06-01"),
-    },
-    {
-      id: "2",
-      name: "Viagem de Férias",
-      target: 300.0,
-      current: 75.0,
-      deadline: new Date("2024-12-01"),
-    },
-  ])
-
-  const categories = [
-    "Alimentação",
-    "Transporte",
-    "Educação",
-    "Entretenimento",
-    "Roupas",
-    "Saúde",
-    "Mesada",
-    "Presente",
-    "Outros",
   ]
 
-  const handleAddTransaction = () => {
-    if (!newTransaction.amount || !newTransaction.description) return
-
-    const transaction = {
-      id: Date.now().toString(),
-      type: newTransaction.type,
-      amount:
-        newTransaction.type === "expense"
-          ? -Number.parseFloat(newTransaction.amount)
-          : Number.parseFloat(newTransaction.amount),
-      description: newTransaction.description,
-      category: newTransaction.category,
-      date: new Date(newTransaction.date),
-      status: "pending",
-    }
-
-    setTransactions([transaction, ...transactions])
-    setBalance(balance + transaction.amount)
-    setNewTransaction({
-      type: "expense",
-      amount: "",
-      description: "",
-      category: "",
-      date: new Date().toISOString().split("T")[0],
-    })
-    setIsAddingTransaction(false)
-  }
-
-  const formatCurrency = (amount: number) => {
-    return amount.toLocaleString("pt-BR", {
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
-    })
+    }).format(value)
   }
 
-  const getTransactionIcon = (type: string) => {
-    return type === "income" ? (
-      <TrendingUp className="w-4 h-4 text-green-600" />
-    ) : (
-      <TrendingDown className="w-4 h-4 text-red-600" />
-    )
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("pt-BR")
   }
 
-  const getStatusBadge = (status: string) => {
-    return status === "completed" ? (
-      <Badge variant="default" className="bg-green-100 text-green-800">
-        Concluído
-      </Badge>
-    ) : (
-      <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-        Pendente
-      </Badge>
+  const getBalanceColor = (balance: number) => {
+    if (balance > 1000) return "text-green-600"
+    if (balance > 500) return "text-yellow-600"
+    return "text-red-600"
+  }
+
+  const getSavingsProgress = (member: any) => {
+    const target = member.role === "adult" ? 2000 : 300
+    return Math.min((member.savings / target) * 100, 100)
+  }
+
+  const totalFamilyBalance = walletData.reduce((sum, member) => sum + member.balance, 0)
+  const totalFamilyIncome = walletData.reduce((sum, member) => sum + member.monthlyIncome, 0)
+  const totalFamilyExpenses = walletData.reduce((sum, member) => sum + member.monthlyExpenses, 0)
+
+  if (selectedMember) {
+    const member = walletData.find((m) => m.name === selectedMember)
+    if (!member) return null
+
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => setSelectedMember(null)} className="text-emerald-700">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-gray-800">Carteira - {member.name}</h1>
+            <p className="text-gray-600">Detalhes financeiros e transações</p>
+          </div>
+          <Badge variant={member.role === "adult" ? "default" : "secondary"}>
+            {member.role === "adult" ? "Adulto" : "Criança"}
+          </Badge>
+        </div>
+
+        {/* Resumo da Carteira */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border-2 border-emerald-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Saldo Atual</p>
+                  <p className={`text-2xl font-bold ${getBalanceColor(member.balance)}`}>
+                    {showBalances ? formatCurrency(member.balance) : "••••••"}
+                  </p>
+                </div>
+                <Wallet className="w-8 h-8 text-emerald-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2 border-emerald-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Receita Mensal</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {showBalances ? formatCurrency(member.monthlyIncome) : "••••••"}
+                  </p>
+                </div>
+                <TrendingUp className="w-8 h-8 text-green-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2 border-emerald-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Gastos Mensais</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {showBalances ? formatCurrency(member.monthlyExpenses) : "••••••"}
+                  </p>
+                </div>
+                <TrendingDown className="w-8 h-8 text-red-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2 border-emerald-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Economia</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {showBalances ? formatCurrency(member.savings) : "••••••"}
+                  </p>
+                </div>
+                <Target className="w-8 h-8 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Meta de Economia */}
+        <Card className="border-2 border-emerald-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-emerald-700">
+              <Target className="w-5 h-5" />
+              Meta de Economia
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">
+                  Progresso: {showBalances ? formatCurrency(member.savings) : "••••••"} /{" "}
+                  {formatCurrency(member.role === "adult" ? 2000 : 300)}
+                </span>
+                <span className="text-sm font-medium text-emerald-700">{getSavingsProgress(member).toFixed(1)}%</span>
+              </div>
+              <Progress value={getSavingsProgress(member)} className="h-3" />
+              <p className="text-xs text-gray-500">
+                {member.role === "adult"
+                  ? "Meta mensal de economia para adultos: R$ 2.000"
+                  : "Meta mensal de economia para crianças: R$ 300"}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Transações Recentes */}
+        <Card className="border-2 border-emerald-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-emerald-700">
+              <Calendar className="w-5 h-5" />
+              Transações Recentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {member.transactions.map((transaction) => (
+                <div key={transaction.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2 rounded-full ${transaction.type === "income" ? "bg-green-100" : "bg-red-100"}`}
+                    >
+                      {transaction.type === "income" ? (
+                        <TrendingUp className="w-4 h-4 text-green-600" />
+                      ) : (
+                        <TrendingDown className="w-4 h-4 text-red-600" />
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-800">{transaction.description}</h4>
+                      <p className="text-sm text-gray-600">{formatDate(transaction.date)}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-bold ${transaction.type === "income" ? "text-green-600" : "text-red-600"}`}>
+                      {showBalances ? formatCurrency(Math.abs(transaction.amount)) : "••••••"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="text-center">
-        <h2 className="text-3xl font-bold text-amber-800 mb-2">Minha Carteira</h2>
-        <p className="text-amber-600">Gerencie seus gastos e economias pessoais</p>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={onBack} className="text-emerald-700">
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-gray-800">Carteiras da Família</h1>
+          <p className="text-gray-600">Visualize os saldos e transações de todos os membros</p>
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setShowBalances(!showBalances)}
+          className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+        >
+          {showBalances ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </Button>
       </div>
 
-      {/* Balance Card */}
-      <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50">
+      {/* Resumo Geral */}
+      <Card className="border-2 border-emerald-200">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center space-x-2">
-              <Wallet className="w-6 h-6 text-amber-600" />
-              <span className="text-amber-800">Saldo Atual</span>
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowBalance(!showBalance)}
-              className="text-amber-600 hover:text-amber-700"
-            >
-              {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            </Button>
-          </div>
+          <CardTitle className="flex items-center gap-2 text-emerald-700">
+            <DollarSign className="w-5 h-5" />
+            Resumo Financeiro da Família
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center">
-            <div className="text-4xl font-bold text-amber-800 mb-2">
-              {showBalance ? formatCurrency(balance) : "••••••"}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="text-center p-4 bg-emerald-50 rounded-lg">
+              <p className="text-sm text-gray-600">Saldo Total</p>
+              <p className="text-2xl font-bold text-emerald-700">
+                {showBalances ? formatCurrency(totalFamilyBalance) : "••••••"}
+              </p>
             </div>
-            <p className="text-sm text-amber-600">Disponível para uso</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 mt-6">
-            <Dialog open={isAddingTransaction} onOpenChange={setIsAddingTransaction}>
-              <DialogTrigger asChild>
-                <Button className="bg-green-600 hover:bg-green-700 text-white">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Adicionar
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Nova Transação</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Tipo</Label>
-                      <Select
-                        value={newTransaction.type}
-                        onValueChange={(value) => setNewTransaction({ ...newTransaction, type: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="income">Receita</SelectItem>
-                          <SelectItem value="expense">Gasto</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Valor</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0,00"
-                        value={newTransaction.amount}
-                        onChange={(e) => setNewTransaction({ ...newTransaction, amount: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Descrição</Label>
-                    <Input
-                      placeholder="Ex: Lanche na escola"
-                      value={newTransaction.description}
-                      onChange={(e) => setNewTransaction({ ...newTransaction, description: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Categoria</Label>
-                    <Select
-                      value={newTransaction.category}
-                      onValueChange={(value) => setNewTransaction({ ...newTransaction, category: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma categoria" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Data</Label>
-                    <Input
-                      type="date"
-                      value={newTransaction.date}
-                      onChange={(e) => setNewTransaction({ ...newTransaction, date: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="flex space-x-2">
-                    <Button onClick={handleAddTransaction} className="flex-1 bg-amber-600 hover:bg-amber-700">
-                      Adicionar
-                    </Button>
-                    <Button variant="outline" onClick={() => setIsAddingTransaction(false)} className="flex-1">
-                      Cancelar
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Button variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-100 bg-transparent">
-              <Download className="w-4 h-4 mr-2" />
-              Extrato
-            </Button>
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <p className="text-sm text-gray-600">Receita Total</p>
+              <p className="text-2xl font-bold text-green-700">
+                {showBalances ? formatCurrency(totalFamilyIncome) : "••••••"}
+              </p>
+            </div>
+            <div className="text-center p-4 bg-red-50 rounded-lg">
+              <p className="text-sm text-gray-600">Gastos Totais</p>
+              <p className="text-2xl font-bold text-red-700">
+                {showBalances ? formatCurrency(totalFamilyExpenses) : "••••••"}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="transactions" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-amber-100">
-          <TabsTrigger value="transactions" className="data-[state=active]:bg-amber-200">
-            Transações
-          </TabsTrigger>
-          <TabsTrigger value="goals" className="data-[state=active]:bg-amber-200">
-            Metas
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="transactions" className="space-y-4">
-          {/* Filters */}
-          <Card className="border-amber-200">
-            <CardContent className="pt-6">
+      {/* Carteiras dos Membros */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {walletData.map((member) => (
+          <Card
+            key={member.name}
+            className="border-2 border-emerald-200 hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => setSelectedMember(member.name)}
+          >
+            <CardHeader>
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-amber-800">Histórico de Transações</h3>
-                <Button variant="outline" size="sm" className="border-amber-300 text-amber-700 bg-transparent">
-                  <Filter className="w-4 h-4 mr-2" />
-                  Filtrar
-                </Button>
+                <CardTitle className="text-lg text-gray-800">{member.name}</CardTitle>
+                <Badge variant={member.role === "adult" ? "default" : "secondary"}>
+                  {member.role === "adult" ? "Adulto" : "Criança"}
+                </Badge>
               </div>
-            </CardContent>
-          </Card>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Saldo Principal */}
+              <div className="text-center p-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-lg">
+                <p className="text-sm text-gray-600">Saldo Atual</p>
+                <p className={`text-3xl font-bold ${getBalanceColor(member.balance)}`}>
+                  {showBalances ? formatCurrency(member.balance) : "••••••"}
+                </p>
+              </div>
 
-          {/* Transactions List */}
-          <div className="space-y-3">
-            {transactions.map((transaction) => (
-              <Card key={transaction.id} className="border-amber-200 bg-gradient-to-r from-white to-amber-50">
-                <CardContent className="pt-4">
+              {/* Estatísticas */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="text-center p-3 bg-green-50 rounded-lg">
+                  <p className="text-xs text-gray-600">Receita</p>
+                  <p className="text-lg font-bold text-green-600">
+                    {showBalances ? formatCurrency(member.monthlyIncome) : "••••"}
+                  </p>
+                </div>
+                <div className="text-center p-3 bg-red-50 rounded-lg">
+                  <p className="text-xs text-gray-600">Gastos</p>
+                  <p className="text-lg font-bold text-red-600">
+                    {showBalances ? formatCurrency(member.monthlyExpenses) : "••••"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Mesada para crianças */}
+              {member.role === "child" && member.allowance > 0 && (
+                <div className="bg-blue-50 p-3 rounded-lg">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                        {getTransactionIcon(transaction.type)}
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-amber-800">{transaction.description}</h4>
-                        <div className="flex items-center space-x-2 text-sm text-amber-600">
-                          <Badge variant="outline" className="text-xs border-amber-300">
-                            {transaction.category}
-                          </Badge>
-                          <span>•</span>
-                          <span>{transaction.date.toLocaleDateString("pt-BR")}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div
-                        className={`text-lg font-bold ${transaction.amount > 0 ? "text-green-600" : "text-red-600"}`}
-                      >
-                        {transaction.amount > 0 ? "+" : ""}
-                        {formatCurrency(Math.abs(transaction.amount))}
-                      </div>
-                      {getStatusBadge(transaction.status)}
-                    </div>
+                    <span className="text-sm text-blue-700">Mesada Mensal</span>
+                    <span className="font-bold text-blue-700">
+                      {showBalances ? formatCurrency(member.allowance) : "••••"}
+                    </span>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
+                </div>
+              )}
 
-        <TabsContent value="goals" className="space-y-4">
-          {/* Goals List */}
-          <div className="space-y-4">
-            {goals.map((goal) => {
-              const progress = (goal.current / goal.target) * 100
-              const daysLeft = Math.ceil((goal.deadline.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-
-              return (
-                <Card key={goal.id} className="border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center space-x-2">
-                        <Target className="w-5 h-5 text-amber-600" />
-                        <span className="text-amber-800">{goal.name}</span>
-                      </CardTitle>
-                      <Badge variant="outline" className="border-amber-300 text-amber-700">
-                        {daysLeft} dias restantes
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex justify-between text-sm text-amber-700">
-                      <span>Progresso: {progress.toFixed(1)}%</span>
-                      <span>
-                        {formatCurrency(goal.current)} / {formatCurrency(goal.target)}
-                      </span>
-                    </div>
-                    <div className="w-full bg-amber-200 rounded-full h-3">
-                      <div
-                        className="bg-gradient-to-r from-amber-500 to-orange-500 h-3 rounded-full transition-all duration-300"
-                        style={{ width: `${Math.min(progress, 100)}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-amber-600">
-                        Faltam: {formatCurrency(goal.target - goal.current)}
-                      </span>
-                      <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
-                        <PiggyBank className="w-4 h-4 mr-2" />
-                        Contribuir
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-
-          {/* Add Goal Button */}
-          <Card className="border-dashed border-2 border-amber-300">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <Target className="w-12 h-12 text-amber-400 mx-auto mb-4" />
-                <h3 className="font-semibold text-amber-800 mb-2">Criar Nova Meta</h3>
-                <p className="text-sm text-amber-600 mb-4">Defina um objetivo de economia e acompanhe seu progresso</p>
-                <Button className="bg-amber-600 hover:bg-amber-700">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nova Meta
-                </Button>
+              {/* Meta de Economia */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-600">Meta de Economia</span>
+                  <span className="text-xs font-medium text-emerald-700">{getSavingsProgress(member).toFixed(0)}%</span>
+                </div>
+                <Progress value={getSavingsProgress(member)} className="h-2" />
               </div>
+
+              {/* Botão para ver detalhes */}
+              <Button
+                variant="outline"
+                className="w-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 bg-transparent"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedMember(member.name)
+                }}
+              >
+                Ver Detalhes
+              </Button>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        ))}
+      </div>
     </div>
   )
 }
-
-export default MemberWallet

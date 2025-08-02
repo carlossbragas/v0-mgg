@@ -1,477 +1,311 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  Settings,
-  Users,
-  Plus,
-  Trash2,
-  Copy,
-  Bell,
-  Database,
-  Download,
-  Upload,
-  Key,
-  UserPlus,
-  Crown,
-} from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { ArrowLeft, Settings, Users, DollarSign, Plus, Trash2, Edit, Save } from "lucide-react"
+import { toast } from "sonner"
 
 interface FamilySettingsProps {
-  user: any
-  family: any
+  familyData: {
+    familyName: string
+    adminName: string
+    members: Array<{
+      name: string
+      role: "adult" | "child"
+      allowance: number
+    }>
+    budget: {
+      monthly: number
+      categories: Array<{
+        name: string
+        limit: number
+      }>
+    }
+  }
+  onBack?: () => void
 }
 
-export function FamilySettings({ user, family }: FamilySettingsProps) {
-  const [isInviting, setIsInviting] = useState(false)
-  const [inviteEmail, setInviteEmail] = useState("")
+export default function FamilySettings({ familyData, onBack }: FamilySettingsProps) {
+  const [editingMember, setEditingMember] = useState<number | null>(null)
+  const [editingCategory, setEditingCategory] = useState<number | null>(null)
+  const [newMemberName, setNewMemberName] = useState("")
+  const [newMemberRole, setNewMemberRole] = useState<"adult" | "child">("adult")
+  const [newMemberAllowance, setNewMemberAllowance] = useState("")
+  const [newCategoryName, setNewCategoryName] = useState("")
+  const [newCategoryLimit, setNewCategoryLimit] = useState("")
 
-  const [familyData, setFamilyData] = useState({
-    name: family?.name || "Família Silva",
-    description: family?.description || "Nossa família unida",
-    code: family?.code || "FAM2024",
-    currency: "BRL",
-    timezone: "America/Sao_Paulo",
-  })
+  // Estados locais para edição
+  const [localFamilyName, setLocalFamilyName] = useState(familyData.familyName)
+  const [localMonthlyBudget, setLocalMonthlyBudget] = useState(familyData.budget.monthly.toString())
+  const [localMembers, setLocalMembers] = useState(familyData.members)
+  const [localCategories, setLocalCategories] = useState(familyData.budget.categories)
 
-  const [members, setMembers] = useState([
-    {
-      id: "1",
-      name: "João Silva",
-      email: "joao@email.com",
-      role: "admin",
-      avatar: "/placeholder-user.jpg",
-      balance: 1250.75,
-      joinedAt: new Date("2024-01-01"),
-      lastActive: new Date("2024-01-15"),
-      permissions: {
-        viewAllTransactions: true,
-        manageMembers: true,
-        manageSettings: true,
-        createTasks: true,
-      },
-    },
-    {
-      id: "2",
-      name: "Maria Silva",
-      email: "maria@email.com",
-      role: "member",
-      avatar: "/placeholder-user.jpg",
-      balance: 850.0,
-      joinedAt: new Date("2024-01-02"),
-      lastActive: new Date("2024-01-14"),
-      permissions: {
-        viewAllTransactions: false,
-        manageMembers: false,
-        manageSettings: false,
-        createTasks: true,
-      },
-    },
-    {
-      id: "3",
-      name: "Ana Silva",
-      email: "ana@email.com",
-      role: "child",
-      avatar: "/placeholder-user.jpg",
-      balance: 45.5,
-      joinedAt: new Date("2024-01-03"),
-      lastActive: new Date("2024-01-15"),
-      permissions: {
-        viewAllTransactions: false,
-        manageMembers: false,
-        manageSettings: false,
-        createTasks: false,
-      },
-    },
-  ])
-
-  const [notifications, setNotifications] = useState({
-    newTransactions: true,
-    taskReminders: true,
-    weeklyReports: true,
-    budgetAlerts: true,
-    memberActivity: false,
-  })
-
-  const roles = [
-    { value: "admin", label: "Administrador", icon: Crown, color: "text-yellow-600" },
-    { value: "member", label: "Membro", icon: Users, color: "text-blue-600" },
-    { value: "child", label: "Criança", icon: UserPlus, color: "text-green-600" },
-  ]
-
-  const handleInviteMember = () => {
-    if (!inviteEmail) return
-
-    // Simular convite
-    console.log("Convite enviado para:", inviteEmail)
-    setInviteEmail("")
-    setIsInviting(false)
-  }
-
-  const handleRemoveMember = (memberId: string) => {
-    setMembers(members.filter((member) => member.id !== memberId))
-  }
-
-  const handleUpdateRole = (memberId: string, newRole: string) => {
-    setMembers(
-      members.map((member) =>
-        member.id === memberId
-          ? {
-              ...member,
-              role: newRole,
-              permissions: {
-                viewAllTransactions: newRole === "admin",
-                manageMembers: newRole === "admin",
-                manageSettings: newRole === "admin",
-                createTasks: newRole !== "child",
-              },
-            }
-          : member,
-      ),
-    )
-  }
-
-  const copyInviteCode = () => {
-    navigator.clipboard.writeText(familyData.code)
-  }
-
-  const formatCurrency = (amount: number) => {
-    return amount.toLocaleString("pt-BR", {
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
-    })
+    }).format(value)
   }
 
-  const getRoleIcon = (role: string) => {
-    const roleConfig = roles.find((r) => r.value === role)
-    if (!roleConfig) return Users
-    return roleConfig.icon
+  const addMember = () => {
+    if (!newMemberName.trim()) return
+
+    const newMember = {
+      name: newMemberName,
+      role: newMemberRole,
+      allowance: Number.parseFloat(newMemberAllowance) || 0,
+    }
+
+    setLocalMembers([...localMembers, newMember])
+    setNewMemberName("")
+    setNewMemberRole("adult")
+    setNewMemberAllowance("")
+    toast.success("Membro adicionado!")
   }
 
-  const getRoleColor = (role: string) => {
-    const roleConfig = roles.find((r) => r.value === role)
-    return roleConfig?.color || "text-gray-600"
+  const removeMember = (index: number) => {
+    setLocalMembers(localMembers.filter((_, i) => i !== index))
+    toast.success("Membro removido!")
+  }
+
+  const addCategory = () => {
+    if (!newCategoryName.trim() || !newCategoryLimit) return
+
+    const newCategory = {
+      name: newCategoryName,
+      limit: Number.parseFloat(newCategoryLimit),
+    }
+
+    setLocalCategories([...localCategories, newCategory])
+    setNewCategoryName("")
+    setNewCategoryLimit("")
+    toast.success("Categoria adicionada!")
+  }
+
+  const removeCategory = (index: number) => {
+    setLocalCategories(localCategories.filter((_, i) => i !== index))
+    toast.success("Categoria removida!")
+  }
+
+  const saveSettings = () => {
+    // Aqui você salvaria as configurações no backend
+    toast.success("Configurações salvas com sucesso!")
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="text-center">
-        <h2 className="text-3xl font-bold text-amber-800 mb-2">Configurações da Família</h2>
-        <p className="text-amber-600">Gerencie membros, permissões e configurações</p>
+      <div className="flex items-center gap-4">
+        {onBack && (
+          <Button variant="ghost" size="icon" onClick={onBack} className="text-emerald-700">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+        )}
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-gray-800">Configurações da Família</h1>
+          <p className="text-gray-600">Gerencie os dados e configurações da família</p>
+        </div>
+        <Button onClick={saveSettings} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+          <Save className="w-4 h-4 mr-2" />
+          Salvar Alterações
+        </Button>
       </div>
 
-      <Tabs defaultValue="members" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-amber-100">
-          <TabsTrigger value="members" className="data-[state=active]:bg-amber-200">
-            Membros
-          </TabsTrigger>
-          <TabsTrigger value="family" className="data-[state=active]:bg-amber-200">
-            Família
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="data-[state=active]:bg-amber-200">
-            Notificações
-          </TabsTrigger>
-          <TabsTrigger value="data" className="data-[state=active]:bg-amber-200">
-            Dados
-          </TabsTrigger>
-        </TabsList>
+      {/* Informações Gerais */}
+      <Card className="border-2 border-emerald-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-emerald-700">
+            <Settings className="w-5 h-5" />
+            Informações Gerais
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="familyName">Nome da Família</Label>
+              <Input
+                id="familyName"
+                value={localFamilyName}
+                onChange={(e) => setLocalFamilyName(e.target.value)}
+                className="border-emerald-200 focus:border-emerald-500"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="monthlyBudget">Orçamento Mensal (R$)</Label>
+              <Input
+                id="monthlyBudget"
+                type="number"
+                value={localMonthlyBudget}
+                onChange={(e) => setLocalMonthlyBudget(e.target.value)}
+                className="border-emerald-200 focus:border-emerald-500"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Members Tab */}
-        <TabsContent value="members" className="space-y-4">
-          <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center space-x-2">
-                  <Users className="w-6 h-6 text-amber-600" />
-                  <span className="text-amber-800">Membros da Família</span>
-                </CardTitle>
-                <Dialog open={isInviting} onOpenChange={setIsInviting}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-amber-600 hover:bg-amber-700">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Convidar
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Convidar Novo Membro</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Email do Convidado</Label>
-                        <Input
-                          type="email"
-                          placeholder="email@exemplo.com"
-                          value={inviteEmail}
-                          onChange={(e) => setInviteEmail(e.target.value)}
-                        />
-                      </div>
-
-                      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <Key className="w-4 h-4 text-amber-600" />
-                          <span className="text-sm font-medium text-amber-800">Código da Família</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <code className="bg-white px-3 py-2 rounded border text-lg font-mono">{familyData.code}</code>
-                          <Button variant="outline" size="sm" onClick={copyInviteCode}>
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <p className="text-xs text-amber-600 mt-2">
-                          Compartilhe este código para que outros possam entrar na família
-                        </p>
-                      </div>
-
-                      <div className="flex space-x-2">
-                        <Button onClick={handleInviteMember} className="flex-1 bg-amber-600 hover:bg-amber-700">
-                          Enviar Convite
-                        </Button>
-                        <Button variant="outline" onClick={() => setIsInviting(false)} className="flex-1">
-                          Cancelar
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {members.map((member) => {
-                  const RoleIcon = getRoleIcon(member.role)
-                  return (
-                    <div
-                      key={member.id}
-                      className="flex items-center justify-between p-4 bg-white rounded-lg border border-amber-200"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <Avatar className="w-12 h-12">
-                          <AvatarImage src={member.avatar || "/placeholder.svg"} alt={member.name} />
-                          <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <h3 className="font-semibold text-amber-800">{member.name}</h3>
-                            <RoleIcon className={`w-4 h-4 ${getRoleColor(member.role)}`} />
-                          </div>
-                          <p className="text-sm text-amber-600">{member.email}</p>
-                          <div className="flex items-center space-x-4 text-xs text-amber-500 mt-1">
-                            <span>Saldo: {formatCurrency(member.balance)}</span>
-                            <span>•</span>
-                            <span>Ativo: {member.lastActive.toLocaleDateString("pt-BR")}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="outline" className={`border-amber-300 ${getRoleColor(member.role)}`}>
-                          {roles.find((r) => r.value === member.role)?.label}
-                        </Badge>
-
-                        {user?.role === "admin" && member.id !== user?.id && (
-                          <>
-                            <Select value={member.role} onValueChange={(value) => handleUpdateRole(member.id, value)}>
-                              <SelectTrigger className="w-32">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {roles.map((role) => (
-                                  <SelectItem key={role.value} value={role.value}>
-                                    {role.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-600"
-                              onClick={() => handleRemoveMember(member.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Family Tab */}
-        <TabsContent value="family" className="space-y-4">
-          <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Settings className="w-6 h-6 text-amber-600" />
-                <span className="text-amber-800">Informações da Família</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nome da Família</Label>
-                  <Input
-                    value={familyData.name}
-                    onChange={(e) => setFamilyData({ ...familyData, name: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Código da Família</Label>
-                  <div className="flex items-center space-x-2">
-                    <Input value={familyData.code} readOnly />
-                    <Button variant="outline" size="sm" onClick={copyInviteCode}>
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Moeda</Label>
-                  <Select
-                    value={familyData.currency}
-                    onValueChange={(value) => setFamilyData({ ...familyData, currency: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="BRL">Real (R$)</SelectItem>
-                      <SelectItem value="USD">Dólar ($)</SelectItem>
-                      <SelectItem value="EUR">Euro (€)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Fuso Horário</Label>
-                  <Select
-                    value={familyData.timezone}
-                    onValueChange={(value) => setFamilyData({ ...familyData, timezone: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="America/Sao_Paulo">São Paulo (GMT-3)</SelectItem>
-                      <SelectItem value="America/New_York">Nova York (GMT-5)</SelectItem>
-                      <SelectItem value="Europe/London">Londres (GMT+0)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Descrição</Label>
-                <Input
-                  value={familyData.description}
-                  onChange={(e) => setFamilyData({ ...familyData, description: e.target.value })}
-                />
-              </div>
-
-              <Button className="bg-amber-600 hover:bg-amber-700">Salvar Alterações</Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Notifications Tab */}
-        <TabsContent value="notifications" className="space-y-4">
-          <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Bell className="w-6 h-6 text-amber-600" />
-                <span className="text-amber-800">Notificações</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {Object.entries(notifications).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between">
+      {/* Membros da Família */}
+      <Card className="border-2 border-emerald-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-emerald-700">
+            <Users className="w-5 h-5" />
+            Membros da Família
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Lista de Membros */}
+          <div className="space-y-3">
+            {localMembers.map((member, index) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
                   <div>
-                    <h4 className="font-medium text-amber-800">
-                      {key === "newTransactions" && "Novas Transações"}
-                      {key === "taskReminders" && "Lembretes de Tarefas"}
-                      {key === "weeklyReports" && "Relatórios Semanais"}
-                      {key === "budgetAlerts" && "Alertas de Orçamento"}
-                      {key === "memberActivity" && "Atividade dos Membros"}
-                    </h4>
-                    <p className="text-sm text-amber-600">
-                      {key === "newTransactions" && "Receba notificações sobre novas transações"}
-                      {key === "taskReminders" && "Lembretes sobre tarefas pendentes"}
-                      {key === "weeklyReports" && "Relatório semanal de gastos"}
-                      {key === "budgetAlerts" && "Alertas quando o orçamento for ultrapassado"}
-                      {key === "memberActivity" && "Notificações sobre atividade dos membros"}
-                    </p>
+                    <h3 className="font-medium text-gray-800">{member.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={member.role === "adult" ? "default" : "secondary"}>
+                        {member.role === "adult" ? "Adulto" : "Criança"}
+                      </Badge>
+                      {member.role === "child" && member.allowance > 0 && (
+                        <Badge variant="outline" className="text-green-700">
+                          Mesada: {formatCurrency(member.allowance)}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <Switch
-                    checked={value}
-                    onCheckedChange={(checked) => setNotifications({ ...notifications, [key]: checked })}
-                  />
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Data Tab */}
-        <TabsContent value="data" className="space-y-4">
-          <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Database className="w-6 h-6 text-amber-600" />
-                <span className="text-amber-800">Gerenciar Dados</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Button variant="outline" className="h-20 flex-col border-amber-300 text-amber-700 bg-transparent">
-                  <Download className="w-6 h-6 mb-2" />
-                  Exportar Dados
-                  <span className="text-xs">Baixar backup completo</span>
-                </Button>
-
-                <Button variant="outline" className="h-20 flex-col border-amber-300 text-amber-700 bg-transparent">
-                  <Upload className="w-6 h-6 mb-2" />
-                  Importar Dados
-                  <span className="text-xs">Restaurar backup</span>
-                </Button>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setEditingMember(index)} className="text-blue-600">
+                    <Edit className="w-3 h-3" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => removeMember(index)} className="text-red-600">
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
               </div>
+            ))}
+          </div>
 
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <h4 className="font-medium text-red-800 mb-2">Zona de Perigo</h4>
-                <p className="text-sm text-red-600 mb-4">
-                  Estas ações são irreversíveis. Tenha certeza antes de prosseguir.
+          {/* Adicionar Novo Membro */}
+          <div className="border-t pt-4">
+            <h4 className="font-medium text-gray-800 mb-3">Adicionar Novo Membro</h4>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <Input
+                placeholder="Nome do membro"
+                value={newMemberName}
+                onChange={(e) => setNewMemberName(e.target.value)}
+                className="border-emerald-200 focus:border-emerald-500"
+              />
+              <Select value={newMemberRole} onValueChange={(value: "adult" | "child") => setNewMemberRole(value)}>
+                <SelectTrigger className="border-emerald-200 focus:border-emerald-500">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="adult">Adulto</SelectItem>
+                  <SelectItem value="child">Criança</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                placeholder="Mesada (R$)"
+                type="number"
+                value={newMemberAllowance}
+                onChange={(e) => setNewMemberAllowance(e.target.value)}
+                disabled={newMemberRole === "adult"}
+                className="border-emerald-200 focus:border-emerald-500"
+              />
+              <Button onClick={addMember} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Plus className="w-4 h-4 mr-2" />
+                Adicionar
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Categorias de Orçamento */}
+      <Card className="border-2 border-emerald-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-emerald-700">
+            <DollarSign className="w-5 h-5" />
+            Categorias de Orçamento
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Lista de Categorias */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {localCategories.map((category, index) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <h3 className="font-medium text-gray-800">{category.name}</h3>
+                  <p className="text-sm text-gray-600">Limite: {formatCurrency(category.limit)}</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setEditingCategory(index)} className="text-blue-600">
+                    <Edit className="w-3 h-3" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => removeCategory(index)} className="text-red-600">
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Adicionar Nova Categoria */}
+          <div className="border-t pt-4">
+            <h4 className="font-medium text-gray-800 mb-3">Adicionar Nova Categoria</h4>
+            <div className="flex gap-3">
+              <Input
+                placeholder="Nome da categoria"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                className="flex-1 border-emerald-200 focus:border-emerald-500"
+              />
+              <Input
+                placeholder="Limite (R$)"
+                type="number"
+                value={newCategoryLimit}
+                onChange={(e) => setNewCategoryLimit(e.target.value)}
+                className="w-32 border-emerald-200 focus:border-emerald-500"
+              />
+              <Button onClick={addCategory} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Plus className="w-4 h-4 mr-2" />
+                Adicionar
+              </Button>
+            </div>
+          </div>
+
+          {/* Resumo do Orçamento */}
+          <div className="border-t pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-3 bg-emerald-50 rounded-lg">
+                <p className="text-sm text-gray-600">Total Categorias</p>
+                <p className="text-xl font-bold text-emerald-700">
+                  {formatCurrency(localCategories.reduce((sum, cat) => sum + cat.limit, 0))}
                 </p>
-                <div className="space-y-2">
-                  <Button variant="destructive" size="sm">
-                    Limpar Todos os Dados
-                  </Button>
-                  <Button variant="destructive" size="sm">
-                    Excluir Família
-                  </Button>
-                </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-gray-600">Orçamento Mensal</p>
+                <p className="text-xl font-bold text-blue-700">
+                  {formatCurrency(Number.parseFloat(localMonthlyBudget) || 0)}
+                </p>
+              </div>
+              <div className="text-center p-3 bg-purple-50 rounded-lg">
+                <p className="text-sm text-gray-600">Diferença</p>
+                <p className="text-xl font-bold text-purple-700">
+                  {formatCurrency(
+                    (Number.parseFloat(localMonthlyBudget) || 0) -
+                      localCategories.reduce((sum, cat) => sum + cat.limit, 0),
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
-
-export default FamilySettings
